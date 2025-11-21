@@ -1,0 +1,64 @@
+{
+  "products": [
+    {
+      "id": "p1",
+      "name": "Mausam Kurta Set",
+      "price": "₹68,800",
+      "aspectRatio": "4:5",
+      "thumbDefault": "/assets/45demo1.png",
+      "thumbHover": "/assets/45demo2.png",
+      "wishlist": false,
+      "order": 1
+    },
+    {
+      "id": "p2",
+      "name": "Chashm Saree Set",
+      "price": "₹83,400",
+      "aspectRatio": "4:5",
+      "thumbDefault": "/assets/45demo3.png",
+      "thumbHover": "/assets/45demo4.png",
+      "wishlist": false,
+      "order": 2
+    },
+    {
+      "id": "p3",
+      "name": "Noor Lehenga Set",
+      "price": "₹95,200",
+      "aspectRatio": "4:5",
+      "thumbDefault": "/assets/43demo1.png",
+      "thumbHover": "/assets/45demo1.png",
+      "wishlist": false,
+      "order": 3
+    },
+    {
+      "id": "p4",
+      "name": "Aaina Kurta Set",
+      "price": "₹72,600",
+      "aspectRatio": "4:5",
+      "thumbDefault": "/assets/45demo2.png",
+      "thumbHover": "/assets/45demo3.png",
+      "wishlist": false,
+      "order": 4
+    },
+    {
+      "id": "p5",
+      "name": "Rang Saree Set",
+      "price": "₹88,900",
+      "aspectRatio": "4:5",
+      "thumbDefault": "/assets/45demo4.png",
+      "thumbHover": "/assets/43demo1.png",
+      "wishlist": false,
+      "order": 5
+    },
+    {
+      "id": "p6",
+      "name": "Zara Lehenga Set",
+      "price": "₹102,400",
+      "aspectRatio": "4:5",
+      "thumbDefault": "/assets/45demo1.png",
+      "thumbHover": "/assets/45demo2.png",
+      "wishlist": false,
+      "order": 6
+    }
+  ]
+}
