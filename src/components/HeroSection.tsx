@@ -2,12 +2,8 @@ import { ChevronLeft, ChevronRight, ChevronsDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from "./ui/carousel";
 import { useEffect, useState } from "react";
-
-const heroImages = [
-  "/assets/demo1.jpg",
-  "/assets/demo2.jpg",
-  "/assets/demo3.jpg",
-];
+import images from "@/data/images.json";
+import content from "@/data/content.json";
 
 const HeroSection = () => {
   const [api, setApi] = useState<CarouselApi>();
@@ -32,12 +28,12 @@ const HeroSection = () => {
         className="absolute inset-0"
       >
         <CarouselContent className="h-screen -ml-0">
-          {heroImages.map((image, index) => (
-            <CarouselItem key={index} className="h-screen pl-0">
+          {images.hero.carousel.map((image) => (
+            <CarouselItem key={image.id} className="h-screen pl-0">
               <div className="relative h-full w-full">
                 <img 
-                  src={image}
-                  alt={`Hero slide ${index + 1}`}
+                  src={image.path}
+                  alt={image.alt}
                   className="w-full h-full object-cover object-center transition-opacity duration-700"
                 />
               </div>
@@ -60,10 +56,10 @@ const HeroSection = () => {
         {/* Vision Statement - Top Left */}
         <div className="w-full lg:w-1/3 text-left lg:text-left text-center">
           <h1 className="font-tenor text-4xl lg:text-5xl xl:text-6xl text-white/90 mb-4">
-            Vision Statement
+            {content.hero.heading}
           </h1>
           <p className="font-lato text-base lg:text-lg text-white/80">
-            Description
+            {content.hero.subheading}
           </p>
         </div>
 
@@ -73,7 +69,7 @@ const HeroSection = () => {
           <Button 
             className="font-tenor px-10 py-6 text-base border border-white/90 bg-transparent hover:bg-[#F3EEE6] text-white/90 hover:text-[#2C2C2C] tracking-wider transition-all duration-500 rounded-none"
           >
-            DISCOVER
+            {content.hero.cta}
           </Button>
 
           {/* Scroll Indicator */}

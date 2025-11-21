@@ -1,0 +1,30 @@
+{
+  "hero": {
+    "heading": "Vision Statement",
+    "subheading": "Description",
+    "cta": "DISCOVER"
+  },
+  "gallery": {
+    "title": "Gallery",
+    "hero_cta": "VIEW GALLERY",
+    "final_cta": "SHOP NOW",
+    "blocks": {
+      "portrait_left": {
+        "title": "Timeless Elegance",
+        "caption": "Each piece in our collection tells a story of craftsmanship and dedication. We believe in creating garments that transcend trends and become cherished heirlooms for generations to come."
+      },
+      "three_grid": {
+        "title": "Heritage & Innovation",
+        "caption": "Drawing inspiration from traditional techniques while embracing modern aesthetics, our designs celebrate the perfect balance between heritage and contemporary style."
+      },
+      "portrait_right": {
+        "title": "Heritage & Innovation",
+        "caption": "Drawing inspiration from traditional techniques while embracing modern aesthetics, our designs celebrate the perfect balance between heritage and contemporary style."
+      }
+    }
+  },
+  "about": {
+    "title": "About SRISHA",
+    "body": "SRISHA is a collection of craft and couture — celebrating traditional skills with contemporary sensibilities."
+  }
+}
