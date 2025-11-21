@@ -1,31 +1,58 @@
 import { ChevronLeft, ChevronRight, ChevronsDown } from "lucide-react";
 import { Button } from "./ui/button";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from "./ui/carousel";
+import { useEffect, useState } from "react";
+
+const heroImages = [
+  "/assets/demo1.jpg",
+  "/assets/demo2.jpg",
+  "/assets/demo3.jpg",
+];
 
 const HeroSection = () => {
+  const [api, setApi] = useState<CarouselApi>();
+
+  useEffect(() => {
+    if (!api) return;
+
+    // Auto-slide every 6 seconds
+    const interval = setInterval(() => {
+      api.scrollNext();
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [api]);
+
   return (
-    <section className="w-full h-screen relative bg-muted overflow-hidden">
-      {/* Full-Bleed Background Image Placeholder */}
-      <div className="absolute inset-0 flex items-center justify-center bg-muted">
-        <div className="text-center">
-          <span className="font-tenor text-3xl lg:text-4xl text-foreground/40">IMAGE CAROUSEL</span>
-          <span className="block font-lato text-sm text-foreground/30 mt-2">16:9</span>
-        </div>
-      </div>
-
-      {/* Navigation Arrows */}
-      <button 
-        className="absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 p-3 hover:opacity-60 transition-opacity z-20"
-        aria-label="Previous image"
+    <section className="w-full h-screen relative overflow-hidden">
+      {/* Full-Bleed Background Carousel */}
+      <Carousel 
+        setApi={setApi}
+        opts={{ loop: true }}
+        className="absolute inset-0"
       >
-        <ChevronLeft className="w-8 h-8 lg:w-10 lg:h-10 text-foreground" strokeWidth={1} />
-      </button>
-
-      <button 
-        className="absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 p-3 hover:opacity-60 transition-opacity z-20"
-        aria-label="Next image"
-      >
-        <ChevronRight className="w-8 h-8 lg:w-10 lg:h-10 text-foreground" strokeWidth={1} />
-      </button>
+        <CarouselContent className="h-screen">
+          {heroImages.map((image, index) => (
+            <CarouselItem key={index} className="h-screen">
+              <div className="relative h-full w-full">
+                <img 
+                  src={image}
+                  alt={`Hero slide ${index + 1}`}
+                  className="w-full h-full object-cover object-center"
+                />
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        
+        {/* Navigation Arrows */}
+        <CarouselPrevious className="absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 bg-transparent border-none hover:bg-transparent hover:opacity-60 transition-opacity z-20 h-auto w-auto p-3">
+          <ChevronLeft className="w-6 h-6 lg:w-8 lg:h-8 text-[#2C2C2C]" strokeWidth={1} />
+        </CarouselPrevious>
+        <CarouselNext className="absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 bg-transparent border-none hover:bg-transparent hover:opacity-60 transition-opacity z-20 h-auto w-auto p-3">
+          <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-[#2C2C2C]" strokeWidth={1} />
+        </CarouselNext>
+      </Carousel>
 
       {/* Overlay Content Container */}
       <div className="relative h-full flex flex-col justify-between px-4 md:px-8 lg:px-16 xl:px-24 py-24 lg:py-32">
@@ -44,16 +71,15 @@ const HeroSection = () => {
         <div className="flex flex-col items-center gap-12">
           {/* CTA Button */}
           <Button 
-            variant="outline" 
-            className="font-tenor px-8 py-6 text-base border-foreground bg-transparent hover:bg-background/10 text-foreground"
+            className="font-tenor px-10 py-6 text-base border border-[#2C2C2C] bg-transparent hover:bg-[#F3EEE6] text-[#2C2C2C] tracking-wider transition-all duration-300 rounded-none"
           >
-            CTA BUTTON
+            DISCOVER
           </Button>
 
           {/* Scroll Indicator */}
-          <div className="flex flex-col items-center gap-2">
-            <p className="font-lato text-sm text-foreground/70">Scroll down to explore</p>
-            <ChevronsDown className="w-5 h-5 text-foreground/50" strokeWidth={1} />
+          <div className="flex flex-col items-center gap-2 animate-bounce-slow">
+            <p className="font-lato text-sm text-[#2C2C2C]/70">Scroll down to explore</p>
+            <ChevronsDown className="w-5 h-5 text-[#2C2C2C]/50" strokeWidth={1} />
           </div>
         </div>
       </div>

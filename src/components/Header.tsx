@@ -1,9 +1,29 @@
 import { Link } from "react-router-dom";
 import { Search, Heart, ShoppingBag, User } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const Header = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const showBackground = isScrolled || isHovered;
+
   return (
-    <header className="w-full h-20 flex items-center justify-between px-8 lg:px-16 xl:px-24 absolute top-0 left-0 z-50 bg-transparent">
+    <header 
+      className={`w-full h-20 flex items-center justify-between px-8 lg:px-16 xl:px-24 sticky top-0 left-0 z-50 transition-all duration-300 ${
+        showBackground ? "bg-[#F8F5F0] shadow-sm" : "bg-transparent"
+      }`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Left Zone - Navigation Links */}
       <nav className="flex gap-8 items-center">
         <Link to="/" className="font-lato text-sm text-foreground hover:opacity-60 transition-opacity">
