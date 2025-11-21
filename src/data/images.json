@@ -6,7 +6,7 @@
         "section": "hero",
         "key": "carousel_1",
         "aspectRatio": "16:9",
-        "path": "/assets/demo1.jpg",
+        "path": "/assets/169demo1.png",
         "alt": "Hero image 1"
       },
       {
@@ -14,7 +14,7 @@
         "section": "hero",
         "key": "carousel_2",
         "aspectRatio": "16:9",
-        "path": "/assets/demo2.jpg",
+        "path": "/assets/169demo2.png",
         "alt": "Hero image 2"
       },
       {
@@ -22,7 +22,7 @@
         "section": "hero",
         "key": "carousel_3",
         "aspectRatio": "16:9",
-        "path": "/assets/demo3.jpg",
+        "path": "/assets/169demo3.png",
         "alt": "Hero image 3"
       }
     ]
@@ -33,7 +33,7 @@
       "section": "gallery",
       "key": "hero_block",
       "aspectRatio": "16:9",
-      "path": "/assets/demo1.jpg",
+      "path": "/assets/169demo4.png",
       "alt": "Gallery hero"
     },
     "portrait_left": {
@@ -41,7 +41,7 @@
       "section": "gallery",
       "key": "portrait_left",
       "aspectRatio": "4:5",
-      "path": "/assets/demo2.jpg",
+      "path": "/assets/45demo1.png",
       "alt": "Portrait left 4:5"
     },
     "three_grid": [
@@ -50,7 +50,7 @@
         "section": "gallery",
         "key": "grid_1",
         "aspectRatio": "9:16",
-        "path": "/assets/demo1.jpg",
+        "path": "/assets/916demo1.png",
         "alt": "Grid tall 1"
       },
       {
@@ -58,7 +58,7 @@
         "section": "gallery",
         "key": "grid_2",
         "aspectRatio": "9:16",
-        "path": "/assets/demo2.jpg",
+        "path": "/assets/916demo2.png",
         "alt": "Grid tall 2"
       },
       {
@@ -66,7 +66,7 @@
         "section": "gallery",
         "key": "grid_3",
         "aspectRatio": "9:16",
-        "path": "/assets/demo3.jpg",
+        "path": "/assets/916demo3.png",
         "alt": "Grid tall 3"
       }
     ],
@@ -75,7 +75,7 @@
       "section": "gallery",
       "key": "portrait_right",
       "aspectRatio": "3:4",
-      "path": "/assets/demo3.jpg",
+      "path": "/assets/43demo1.png",
       "alt": "Portrait right 3:4"
     },
     "final_cta": {
@@ -83,7 +83,7 @@
       "section": "gallery",
       "key": "final_cta",
       "aspectRatio": "16:9",
-      "path": "/assets/demo1.jpg",
+      "path": "/assets/169demo1.png",
       "alt": "Gallery final CTA"
     }
   }
