@@ -1,0 +1,19 @@
+{
+  "quickLinks": [
+    { "label": "Orders & Shipment", "url": "/orders" },
+    { "label": "Privacy Policy", "url": "/privacy" },
+    { "label": "FAQs", "url": "/faqs" }
+  ],
+  "contact": {
+    "address": "Address goes here",
+    "number": "+91 90000 00000",
+    "email": "contact@srisha.com"
+  },
+  "socials": [
+    { "label": "Instagram", "url": "https://instagram.com" },
+    { "label": "Facebook", "url": "https://facebook.com" },
+    { "label": "Threads", "url": "https://threads.net" },
+    { "label": "YouTube", "url": "https://youtube.com" }
+  ],
+  "copyright": "© 2025 All Rights Reserved"
+}

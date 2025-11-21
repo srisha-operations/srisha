@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import ProductCard from "./ProductCard";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
@@ -13,6 +13,9 @@ const ProductListingSection = () => {
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number>();
 
   // Sort products
   const sortedProducts = [...productsData.products].sort((a, b) => {
@@ -37,8 +40,43 @@ const ProductListingSection = () => {
     }));
   };
 
+  // Auto-scroll functionality
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    let scrollPosition = 0;
+    const scrollSpeed = 0.5; // pixels per frame
+
+    const autoScroll = () => {
+      if (!isHovered && scrollContainer) {
+        scrollPosition += scrollSpeed;
+        
+        // Reset scroll when reaching end for seamless loop
+        if (scrollPosition >= scrollContainer.scrollWidth / 2) {
+          scrollPosition = 0;
+        }
+        
+        scrollContainer.scrollLeft = scrollPosition;
+      }
+      animationRef.current = requestAnimationFrame(autoScroll);
+    };
+
+    // Only auto-scroll on desktop
+    const isDesktop = window.innerWidth > 768;
+    if (isDesktop) {
+      animationRef.current = requestAnimationFrame(autoScroll);
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isHovered]);
+
   return (
-    <section className="w-full py-16 md:py-24 bg-background">
+    <section className="w-full bg-background" style={{ paddingTop: '100px', paddingBottom: '100px' }}>
       <div className="container mx-auto px-4">
         {/* Title */}
         <h2 className="font-tenor text-3xl md:text-4xl text-center mb-8 text-foreground">
@@ -151,16 +189,29 @@ const ProductListingSection = () => {
         </div>
 
         {/* Horizontal Scrollable Product Grid */}
-        <div className="relative">
+        <div 
+          className="relative"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
           {/* Left shadow gradient */}
-          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          <div className="hidden md:block absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-background via-background/80 to-transparent z-10 pointer-events-none" />
           
           {/* Scrollable container */}
-          <div className="overflow-x-auto pb-4 -mx-4 px-4 scroll-smooth">
-            <div className="flex gap-6 md:gap-8 min-w-max">
-              {sortedProducts.map((product) => (
+          <div 
+            ref={scrollRef}
+            className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            <div className="flex gap-5 md:gap-8">
+              {/* Duplicate products for seamless loop on desktop */}
+              {[...sortedProducts, ...sortedProducts].map((product, index) => (
                 <div
-                  key={product.id}
+                  key={`${product.id}-${index}`}
                   className="w-[45vw] md:w-[22vw] flex-shrink-0"
                 >
                   <ProductCard
@@ -174,7 +225,7 @@ const ProductListingSection = () => {
           </div>
 
           {/* Right shadow gradient */}
-          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+          <div className="hidden md:block absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-background via-background/80 to-transparent z-10 pointer-events-none" />
         </div>
 
         {/* View All CTA */}

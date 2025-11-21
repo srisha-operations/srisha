@@ -1,7 +1,23 @@
 import { useState } from "react";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart } from "lucide-react";
 import { Button } from "./ui/button";
 import { AspectRatio } from "./ui/aspect-ratio";
+
+// WhatsApp icon component
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </svg>
+);
 
 interface Product {
   id: string;
@@ -37,33 +53,46 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardPro
           <img
             src={isHovered ? product.thumbHover : product.thumbDefault}
             alt={product.name}
-            className="w-full h-full object-cover object-center transition-opacity duration-200"
+            className="w-full h-full object-cover object-center transition-all duration-200"
+            style={{
+              transitionProperty: 'opacity, transform',
+              transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
           />
           
           {/* Wishlist Heart */}
           <button
             onClick={onToggleWishlist}
-            className="absolute top-3 right-3 z-20 w-10 h-10 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-full hover:bg-background transition-colors"
+            className="absolute top-3 right-3 z-20 w-10 h-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200 hover:scale-110"
             aria-label="Add to wishlist"
+            style={{
+              transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
           >
             <Heart
               className={`w-5 h-5 transition-all duration-200 ${
                 isWishlisted
-                  ? "fill-[#D4AF37] text-[#D4AF37]"
+                  ? "fill-accent text-accent"
                   : "text-foreground"
               }`}
+              style={{
+                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
             />
           </button>
 
           {/* View Details Overlay (Desktop Hover) */}
           <div
-            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-6 transition-opacity duration-200 ${
-              isHovered ? "opacity-100" : "opacity-0"
+            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-6 transition-all duration-200 ${
+              isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
+            style={{
+              transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
           >
             <Button
               variant="outline"
-              className="w-full bg-background/10 border-background/40 text-background hover:bg-background hover:text-foreground backdrop-blur-sm"
+              className="w-full bg-background/10 border-background/40 text-background hover:bg-background hover:text-foreground backdrop-blur-sm transition-all duration-150"
             >
               View Details
             </Button>
@@ -84,9 +113,12 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardPro
         <Button
           onClick={handleInquire}
           variant="outline"
-          className="w-full gap-2 hover:bg-muted"
+          className="w-full gap-2 hover:bg-secondary transition-all duration-150"
+          style={{
+            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
         >
-          <MessageCircle className="w-4 h-4" />
+          <WhatsAppIcon className="w-4 h-4" />
           Inquire
         </Button>
       </div>
