@@ -111,8 +111,6 @@ const ProductListingSection = () => {
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* Left shadow gradient */}
-          <div className="hidden md:block absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-background via-background/80 to-transparent z-10 pointer-events-none" />
           
           {/* Scrollable container */}
           <div 
@@ -141,10 +139,6 @@ const ProductListingSection = () => {
               ))}
             </div>
           </div>
-
-          {/* Right shadow gradient */}
-          <div className="hidden md:block absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-background via-background/80 to-transparent z-10 pointer-events-none" />
-        </div>
 
         {/* View All CTA */}
         <div className="flex justify-center mt-12">
