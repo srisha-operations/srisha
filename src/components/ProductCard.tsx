@@ -31,10 +31,18 @@ interface ProductCardProps {
   product: Product;
   isWishlisted: boolean;
   onToggleWishlist: () => void;
+  onProductClick?: (product: Product) => void;
 }
 
-const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardProps) => {
+const ProductCard = ({ product, isWishlisted, onToggleWishlist, onProductClick }: ProductCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  const handleProductClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onProductClick) {
+      onProductClick(product);
+    }
+  };
 
   const handleInquire = () => {
     // Add to inquiries localStorage
@@ -70,7 +78,7 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardPro
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Container */}
-      <div className="relative overflow-hidden bg-muted mb-4">
+      <div className="relative overflow-hidden bg-muted mb-4 cursor-pointer" onClick={handleProductClick}>
         <AspectRatio ratio={4/5}>
           <img
             src={isHovered ? product.thumbHover : product.thumbDefault}
@@ -115,6 +123,10 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardPro
             }}
           >
             <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleProductClick(e);
+              }}
               variant="outline"
               className="w-full bg-background/10 border-background/40 text-background hover:bg-background hover:text-foreground backdrop-blur-sm transition-all duration-150"
             >

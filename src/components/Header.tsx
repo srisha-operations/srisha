@@ -72,7 +72,7 @@ const Header = () => {
     setUser(userData);
   };
 
-  const showBackground = isScrolled || isHovered;
+  const showBackground = isScrolled || isHovered || isSearchOpen;
   const textColor = showBackground ? "text-[#2C2C2C]" : "text-white/90";
   const iconColor = showBackground ? "#2C2C2C" : "#FFFFFF";
 
