@@ -39,6 +39,12 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
     inquiryIds.includes(p.id)
   );
 
+  const handleRemove = (productId: string) => {
+    const updated = inquiryIds.filter((id) => id !== productId);
+    localStorage.setItem(INQUIRIES_KEY, JSON.stringify(updated));
+    setInquiryIds(updated);
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -96,6 +102,16 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
                     </h4>
                     <p className="text-sm text-muted-foreground">{product.price}</p>
                   </button>
+                </div>
+                <div className="flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemove(product.id)}
+                    className="font-lato text-xs text-destructive hover:text-destructive"
+                  >
+                    Remove
+                  </Button>
                 </div>
               </div>
             ))}

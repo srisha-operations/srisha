@@ -1,4 +1,4 @@
-import { Heart, ShoppingBag, User } from "lucide-react";
+import { Heart, ShoppingBag, User, Store, Mail } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -75,6 +75,7 @@ const MobileNav = ({
             onClick={() => handleNavAction("shop")}
             className="flex items-center gap-3 font-tenor text-base tracking-wide text-foreground hover:text-accent transition-colors duration-300 text-left"
           >
+            <Store className="w-5 h-5" strokeWidth={1.5} />
             <span>Shop</span>
           </button>
 
@@ -98,6 +99,7 @@ const MobileNav = ({
             onClick={() => handleNavAction("contact")}
             className="flex items-center gap-3 font-tenor text-base tracking-wide text-foreground hover:text-accent transition-colors duration-300 text-left"
           >
+            <Mail className="w-5 h-5" strokeWidth={1.5} />
             <span>Contact</span>
           </button>
 

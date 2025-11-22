@@ -39,6 +39,13 @@ const WishlistDrawer = ({ open, onOpenChange }: WishlistDrawerProps) => {
     wishlistIds.includes(p.id)
   );
 
+  const handleRemove = (productId: string) => {
+    const updated = wishlistIds.filter((id) => id !== productId);
+    localStorage.setItem(WISHLIST_KEY, JSON.stringify(updated));
+    setWishlistIds(updated);
+    window.dispatchEvent(new Event("wishlistUpdated"));
+  };
+
   const handleInquire = (productName: string) => {
     const message = encodeURIComponent(`I would like to inquire about ${productName}`);
     window.open(`https://wa.me/PHONE_NUMBER?text=${message}`, "_blank");
@@ -102,7 +109,7 @@ const WishlistDrawer = ({ open, onOpenChange }: WishlistDrawerProps) => {
                     <p className="text-sm text-muted-foreground">{product.price}</p>
                   </button>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -110,6 +117,14 @@ const WishlistDrawer = ({ open, onOpenChange }: WishlistDrawerProps) => {
                     className="font-lato text-xs"
                   >
                     Inquire
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemove(product.id)}
+                    className="font-lato text-xs text-destructive hover:text-destructive"
+                  >
+                    Remove
                   </Button>
                 </div>
               </div>

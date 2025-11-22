@@ -51,10 +51,10 @@ const HeroSection = () => {
       </Carousel>
 
       {/* Overlay Content Container */}
-      <div className="relative h-full flex flex-col justify-between px-4 md:px-8 lg:px-16 xl:px-24 pt-32 lg:pt-40 pb-16 lg:pb-24">
+      <div className="relative h-full flex flex-col justify-center items-center px-4 md:px-8 lg:px-16 xl:px-24 lg:justify-between lg:pt-40 lg:pb-24">
         
-        {/* Vision Statement - Top Left */}
-        <div className="w-full lg:w-1/3 text-left lg:text-left text-center">
+        {/* Vision Statement */}
+        <div className="w-full lg:w-1/3 text-center lg:text-left mb-8 lg:mb-0">
           <h1 className="font-tenor text-4xl lg:text-5xl xl:text-6xl text-white/90 mb-4">
             {content.hero.heading}
           </h1>
@@ -64,9 +64,13 @@ const HeroSection = () => {
         </div>
 
         {/* Bottom Content - CTA and Scroll Indicator */}
-        <div className="flex flex-col items-center gap-12">
+        <div className="flex flex-col items-center gap-8 lg:gap-12">
           {/* CTA Button */}
           <Button 
+            onClick={() => {
+              const section = document.getElementById("product-listing");
+              section?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
             className="font-tenor px-10 py-6 text-base border border-white/90 bg-transparent hover:bg-[#F3EEE6] text-white/90 hover:text-[#2C2C2C] tracking-wider transition-all duration-500 rounded-none"
           >
             {content.hero.cta}

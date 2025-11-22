@@ -73,8 +73,7 @@ const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
                 <button
                   key={product.id}
                   onClick={() => {
-                    // TODO: Open product detail modal
-                    console.log("Open product:", product.id);
+                    window.dispatchEvent(new CustomEvent("openProductModal", { detail: product }));
                     onClose();
                   }}
                   className="text-left hover:opacity-80 transition-opacity"

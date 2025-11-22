@@ -7,7 +7,7 @@ const GallerySection = () => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <section className="w-full" style={{ paddingTop: '100px', paddingBottom: '100px' }}>
+    <section className="w-full bg-background pt-[100px] pb-[100px]">
       <div className="container mx-auto px-4">
         {/* Section Title with Collapse Toggle */}
         <div className="flex items-center justify-center mb-16 md:mb-24 relative">

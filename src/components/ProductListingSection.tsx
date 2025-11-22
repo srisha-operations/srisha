@@ -1,22 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import ProductCard from "./ProductCard";
+import ProductDetailModal from "./ProductDetailModal";
 import { Button } from "./ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
-import { SlidersHorizontal, ArrowUpDown } from "lucide-react";
 import productsData from "@/data/products.json";
 import { Link } from "react-router-dom";
-
-type SortOption = "price-asc" | "price-high" | "newest";
 
 // localStorage key: srisha_wishlist
 const WISHLIST_KEY = "srisha_wishlist";
 
 const ProductListingSection = () => {
   const [wishlistState, setWishlistState] = useState<Record<string, boolean>>({});
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
-  const [sortOpen, setSortOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<typeof productsData.products[0] | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
 
@@ -35,23 +31,16 @@ const ProductListingSection = () => {
         setWishlistState({});
       }
     }
-  }, []);
 
-  // Sort products
-  const sortedProducts = [...productsData.products].sort((a, b) => {
-    const priceA = parseInt(a.price.replace(/[^0-9]/g, ""));
-    const priceB = parseInt(b.price.replace(/[^0-9]/g, ""));
-    
-    switch (sortBy) {
-      case "price-asc":
-        return priceA - priceB;
-      case "price-high":
-        return priceB - priceA;
-      case "newest":
-      default:
-        return a.order - b.order;
-    }
-  });
+    // Listen for product modal open from search
+    const handleOpenProductModal = (e: any) => {
+      setSelectedProduct(e.detail);
+      setIsModalOpen(true);
+    };
+
+    window.addEventListener("openProductModal", handleOpenProductModal as EventListener);
+    return () => window.removeEventListener("openProductModal", handleOpenProductModal as EventListener);
+  }, []);
 
   const toggleWishlist = (id: string) => {
     setWishlistState((prev) => {
@@ -66,6 +55,11 @@ const ProductListingSection = () => {
       
       return newState;
     });
+  };
+
+  const handleProductClick = (product: typeof productsData.products[0]) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
   };
 
   // Auto-scroll functionality
@@ -104,117 +98,12 @@ const ProductListingSection = () => {
   }, [isHovered]);
 
   return (
-    <section id="product-listing" className="w-full bg-background" style={{ paddingTop: '100px', paddingBottom: '100px' }}>
-      <div className="container mx-auto px-4">
+    <section id="product-listing" className="w-full bg-background py-[100px]">
+      <div className="px-8 lg:px-16 xl:px-24">
         {/* Title */}
-        <h2 className="font-tenor text-3xl md:text-4xl text-center mb-8 text-foreground">
+        <h2 className="font-tenor text-4xl lg:text-5xl text-center text-foreground mb-12 tracking-wide">
           Collections
         </h2>
-
-        {/* Sort & Filter Controls */}
-        <div className="flex justify-end gap-3 mb-8">
-          <Sheet open={sortOpen} onOpenChange={setSortOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <ArrowUpDown className="h-4 w-4" />
-                Sort By
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[340px] sm:w-[340px]">
-              <SheetHeader>
-                <SheetTitle className="font-tenor">Sort By</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6 space-y-3">
-                <button
-                  onClick={() => {
-                    setSortBy("price-asc");
-                    setSortOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-md transition-colors ${
-                    sortBy === "price-asc"
-                      ? "bg-muted text-foreground font-medium"
-                      : "hover:bg-muted/50"
-                  }`}
-                >
-                  Price: Low to High
-                </button>
-                <button
-                  onClick={() => {
-                    setSortBy("price-high");
-                    setSortOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-md transition-colors ${
-                    sortBy === "price-high"
-                      ? "bg-muted text-foreground font-medium"
-                      : "hover:bg-muted/50"
-                  }`}
-                >
-                  Price: High to Low
-                </button>
-                <button
-                  onClick={() => {
-                    setSortBy("newest");
-                    setSortOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-md transition-colors ${
-                    sortBy === "newest"
-                      ? "bg-muted text-foreground font-medium"
-                      : "hover:bg-muted/50"
-                  }`}
-                >
-                  Newest First
-                </button>
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <SlidersHorizontal className="h-4 w-4" />
-                Filter
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[340px] sm:w-[340px]">
-              <SheetHeader>
-                <SheetTitle className="font-tenor">Filter</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6 space-y-6">
-                <div>
-                  <h4 className="font-medium mb-3">Category</h4>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>• Sarees</p>
-                    <p>• Kurta Sets</p>
-                    <p>• Lehengas</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-3">Color</h4>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>• Ivory</p>
-                    <p>• Gold</p>
-                    <p>• Rose</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-3">Availability</h4>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>• In Stock</p>
-                    <p>• Made to Order</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-3">Price Range</h4>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>• Under ₹50,000</p>
-                    <p>• ₹50,000 - ₹80,000</p>
-                    <p>• Above ₹80,000</p>
-                  </div>
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
 
         {/* Horizontal Scrollable Product Grid */}
         <div 
@@ -237,7 +126,7 @@ const ProductListingSection = () => {
           >
             <div className="flex gap-5 md:gap-8">
               {/* Duplicate products for seamless loop on desktop */}
-              {[...sortedProducts, ...sortedProducts].map((product, index) => (
+              {[...productsData.products, ...productsData.products].map((product, index) => (
                 <div
                   key={`${product.id}-${index}`}
                   className="w-[45vw] md:w-[22vw] flex-shrink-0"
@@ -246,6 +135,7 @@ const ProductListingSection = () => {
                     product={product}
                     isWishlisted={wishlistState[product.id] || false}
                     onToggleWishlist={() => toggleWishlist(product.id)}
+                    onProductClick={handleProductClick}
                   />
                 </div>
               ))}
@@ -268,6 +158,12 @@ const ProductListingSection = () => {
           </Link>
         </div>
       </div>
+
+      <ProductDetailModal
+        product={selectedProduct}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
     </section>
   );
 };
