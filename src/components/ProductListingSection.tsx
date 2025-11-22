@@ -98,7 +98,7 @@ const ProductListingSection = () => {
   }, [isHovered]);
 
   return (
-    <section id="product-listing" className="w-full bg-background py-[100px]">
+    <section id="product-listing" className="w-full bg-background py-[60px]">
       <div className="px-8 lg:px-16 xl:px-24">
         {/* Title */}
         <h2 className="font-tenor text-4xl lg:text-5xl text-center text-foreground mb-12 tracking-wide">
