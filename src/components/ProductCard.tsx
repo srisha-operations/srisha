@@ -37,8 +37,30 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardPro
   const [isHovered, setIsHovered] = useState(false);
 
   const handleInquire = () => {
-    const message = encodeURIComponent(`I want to know more about ${product.name}`);
-    window.open(`https://wa.me/?text=${message}`, "_blank");
+    // Add to inquiries localStorage
+    const INQUIRIES_KEY = "srisha_inquiries";
+    const stored = localStorage.getItem(INQUIRIES_KEY);
+    let inquiries: string[] = [];
+    
+    if (stored) {
+      try {
+        inquiries = JSON.parse(stored);
+      } catch {
+        inquiries = [];
+      }
+    }
+    
+    if (!inquiries.includes(product.id)) {
+      inquiries.push(product.id);
+      localStorage.setItem(INQUIRIES_KEY, JSON.stringify(inquiries));
+    }
+
+    // Open WhatsApp
+    const message = encodeURIComponent(`I would like to inquire about ${product.name}`);
+    window.open(`https://wa.me/PHONE_NUMBER?text=${message}`, "_blank");
+    
+    // Dispatch event to open cart drawer
+    window.dispatchEvent(new CustomEvent("openCartDrawer"));
   };
 
   return (
@@ -63,7 +85,9 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardPro
           {/* Wishlist Heart */}
           <button
             onClick={onToggleWishlist}
-            className="absolute top-3 right-3 z-20 w-10 h-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200 hover:scale-110"
+            className={`absolute top-3 right-3 z-20 w-10 h-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200 ${
+              isHovered ? "hover:scale-110" : ""
+            }`}
             aria-label="Add to wishlist"
             style={{
               transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
@@ -74,7 +98,7 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardPro
                 isWishlisted
                   ? "fill-accent text-accent"
                   : "text-foreground"
-              }`}
+              } ${isHovered ? "scale-110" : ""}`}
               style={{
                 transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
               }}
@@ -84,7 +108,7 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist }: ProductCardPro
           {/* View Details Overlay (Desktop Hover) */}
           <div
             className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-6 transition-all duration-200 ${
-              isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+              isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
             style={{
               transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'

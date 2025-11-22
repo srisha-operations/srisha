@@ -1,12 +1,32 @@
 import { Link } from "react-router-dom";
-import { Search, Heart, ShoppingBag, User, Menu } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Search, Heart, ShoppingBag, User, Menu, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import MobileNav from "./MobileNav";
+import SearchBar from "./SearchBar";
+import WishlistDrawer from "./WishlistDrawer";
+import CartDrawer from "./CartDrawer";
+import AuthModal from "./AuthModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+
+// localStorage key: srisha_user
+const USER_KEY = "srisha_user";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authView, setAuthView] = useState<"signin" | "signup">("signin");
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,6 +35,42 @@ const Header = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    // Load user from localStorage
+    const stored = localStorage.getItem(USER_KEY);
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored));
+      } catch {
+        setUser(null);
+      }
+    }
+
+    // Listen for cart drawer open event
+    const handleOpenCart = () => {
+      setIsCartOpen(true);
+    };
+    
+    window.addEventListener("openCartDrawer", handleOpenCart);
+    return () => window.removeEventListener("openCartDrawer", handleOpenCart);
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem(USER_KEY);
+    setUser(null);
+  };
+
+  const handleAuthSuccess = (userData: { name: string; email: string }) => {
+    setUser(userData);
+  };
 
   const showBackground = isScrolled || isHovered;
   const textColor = showBackground ? "text-[#2C2C2C]" : "text-white/90";
@@ -31,12 +87,18 @@ const Header = () => {
       >
         {/* Desktop Navigation - Hidden on Mobile */}
         <nav className="hidden md:flex gap-8 items-center">
-          <Link to="/" className={`font-lato text-sm ${textColor} hover:opacity-60 transition-all duration-500`}>
+          <button
+            onClick={() => scrollToSection("product-listing")}
+            className={`font-lato text-sm ${textColor} hover:opacity-60 transition-all duration-500`}
+          >
             Shop
-          </Link>
-          <Link to="/" className={`font-lato text-sm ${textColor} hover:opacity-60 transition-all duration-500`}>
+          </button>
+          <button
+            onClick={() => scrollToSection("footer-contact")}
+            className={`font-lato text-sm ${textColor} hover:opacity-60 transition-all duration-500`}
+          >
             Contact
-          </Link>
+          </button>
         </nav>
 
         {/* Mobile Left - Hamburger Menu */}
@@ -58,22 +120,87 @@ const Header = () => {
 
         {/* Desktop Right Zone - All Icons */}
         <div className="hidden md:flex gap-6 items-center">
-          <button className="hover:opacity-60 transition-opacity" aria-label="Search">
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="hover:opacity-60 transition-opacity"
+            aria-label="Search"
+          >
             <Search className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
           </button>
-          <button className="hover:opacity-60 transition-opacity" aria-label="Wishlist">
+          <button
+            onClick={() => setIsWishlistOpen(true)}
+            className="hover:opacity-60 transition-opacity"
+            aria-label="Wishlist"
+          >
             <Heart className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
           </button>
-          <button className="hover:opacity-60 transition-opacity" aria-label="Shopping Bag">
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="hover:opacity-60 transition-opacity"
+            aria-label="Shopping Bag"
+          >
             <ShoppingBag className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
           </button>
-          <button className="hover:opacity-60 transition-opacity" aria-label="Profile">
-            <User className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
-          </button>
+
+          {/* Profile Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="hover:opacity-60 transition-opacity flex items-center gap-1" aria-label="Profile">
+                {user ? (
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-tenor transition-all duration-500"
+                    style={{
+                      backgroundColor: showBackground ? "#2C2C2C" : "#FFFFFF",
+                      color: showBackground ? "#FFFFFF" : "#2C2C2C",
+                    }}
+                  >
+                    {user.name.substring(0, 2).toUpperCase()}
+                  </div>
+                ) : (
+                  <User className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {user ? (
+                <>
+                  <DropdownMenuItem disabled className="font-lato text-xs">
+                    Signed in as {user.name}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="font-lato">
+                    Sign Out
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setAuthView("signin");
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="font-lato"
+                  >
+                    Sign In
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setAuthView("signup");
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="font-lato"
+                  >
+                    Sign Up
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Mobile Right - Search Icon Only */}
         <button
+          onClick={() => setIsSearchOpen(true)}
           className="md:hidden hover:opacity-60 transition-opacity"
           aria-label="Search"
         >
@@ -81,7 +208,36 @@ const Header = () => {
         </button>
       </header>
 
-      <MobileNav open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen} />
+      <MobileNav
+        open={isMobileNavOpen}
+        onOpenChange={setIsMobileNavOpen}
+        onSearchOpen={() => setIsSearchOpen(true)}
+        onWishlistOpen={() => setIsWishlistOpen(true)}
+        onCartOpen={() => setIsCartOpen(true)}
+        onAuthOpen={(view) => {
+          setAuthView(view);
+          setIsAuthModalOpen(true);
+        }}
+        user={user}
+        onSignOut={handleSignOut}
+        onShopClick={() => scrollToSection("product-listing")}
+        onContactClick={() => scrollToSection("footer-contact")}
+      />
+
+      <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <WishlistDrawer open={isWishlistOpen} onOpenChange={setIsWishlistOpen} />
+      <CartDrawer open={isCartOpen} onOpenChange={setIsCartOpen} />
+      <AuthModal
+        open={isAuthModalOpen}
+        onOpenChange={setIsAuthModalOpen}
+        defaultView={authView}
+        onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Backdrop blur for drawers */}
+      {(isWishlistOpen || isCartOpen) && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" style={{ pointerEvents: 'none' }} />
+      )}
     </>
   );
 };

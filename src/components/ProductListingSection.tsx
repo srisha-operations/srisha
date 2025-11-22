@@ -8,6 +8,9 @@ import { Link } from "react-router-dom";
 
 type SortOption = "price-asc" | "price-high" | "newest";
 
+// localStorage key: srisha_wishlist
+const WISHLIST_KEY = "srisha_wishlist";
+
 const ProductListingSection = () => {
   const [wishlistState, setWishlistState] = useState<Record<string, boolean>>({});
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -16,6 +19,23 @@ const ProductListingSection = () => {
   const [isHovered, setIsHovered] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
+
+  // Load wishlist from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(WISHLIST_KEY);
+    if (stored) {
+      try {
+        const wishlistIds: string[] = JSON.parse(stored);
+        const wishlistObj: Record<string, boolean> = {};
+        wishlistIds.forEach((id) => {
+          wishlistObj[id] = true;
+        });
+        setWishlistState(wishlistObj);
+      } catch {
+        setWishlistState({});
+      }
+    }
+  }, []);
 
   // Sort products
   const sortedProducts = [...productsData.products].sort((a, b) => {
@@ -34,10 +54,18 @@ const ProductListingSection = () => {
   });
 
   const toggleWishlist = (id: string) => {
-    setWishlistState((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setWishlistState((prev) => {
+      const newState = {
+        ...prev,
+        [id]: !prev[id],
+      };
+      
+      // Save to localStorage
+      const wishlistIds = Object.keys(newState).filter((key) => newState[key]);
+      localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistIds));
+      
+      return newState;
+    });
   };
 
   // Auto-scroll functionality
@@ -76,7 +104,7 @@ const ProductListingSection = () => {
   }, [isHovered]);
 
   return (
-    <section className="w-full bg-background" style={{ paddingTop: '100px', paddingBottom: '100px' }}>
+    <section id="product-listing" className="w-full bg-background" style={{ paddingTop: '100px', paddingBottom: '100px' }}>
       <div className="container mx-auto px-4">
         {/* Title */}
         <h2 className="font-tenor text-3xl md:text-4xl text-center mb-8 text-foreground">
