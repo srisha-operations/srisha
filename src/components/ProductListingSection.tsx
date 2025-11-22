@@ -139,6 +139,7 @@ const ProductListingSection = () => {
               ))}
             </div>
           </div>
+        </div>
 
         {/* View All CTA */}
         <div className="flex justify-center mt-12">
