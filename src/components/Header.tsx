@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Search, Heart, ShoppingBag, User, Menu, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import MobileNav from "./MobileNav";
@@ -18,6 +18,8 @@ import {
 const USER_KEY = "srisha_user";
 
 const Header = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -27,6 +29,8 @@ const Header = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authView, setAuthView] = useState<"signin" | "signup">("signin");
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  
+  const isProductsPage = location.pathname === "/products";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -47,19 +51,50 @@ const Header = () => {
       }
     }
 
-    // Listen for cart drawer open event
+    // Listen for cart drawer and auth modal open events
     const handleOpenCart = () => {
       setIsCartOpen(true);
     };
     
+    const handleOpenAuth = () => {
+      setAuthView("signin");
+      setIsAuthModalOpen(true);
+    };
+    
     window.addEventListener("openCartDrawer", handleOpenCart);
-    return () => window.removeEventListener("openCartDrawer", handleOpenCart);
+    window.addEventListener("openAuthModal", handleOpenAuth);
+    return () => {
+      window.removeEventListener("openCartDrawer", handleOpenCart);
+      window.removeEventListener("openAuthModal", handleOpenAuth);
+    };
   }, []);
 
+  const handleLogoClick = () => {
+    if (location.pathname !== "/") {
+      navigate("/");
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 100);
+    } else {
+      const hero = document.getElementById("hero");
+      hero?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleShopClick = () => {
+    navigate("/products");
+  };
+
   const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (location.pathname !== "/") {
+      navigate("/");
+      setTimeout(() => {
+        const element = document.getElementById(id);
+        element?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    } else {
+      const element = document.getElementById(id);
+      element?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -72,7 +107,7 @@ const Header = () => {
     setUser(userData);
   };
 
-  const showBackground = isScrolled || isHovered || isSearchOpen;
+  const showBackground = isScrolled || isHovered || isSearchOpen || isProductsPage;
   const textColor = showBackground ? "text-[#2C2C2C]" : "text-white/90";
   const iconColor = showBackground ? "#2C2C2C" : "#FFFFFF";
 
@@ -88,7 +123,7 @@ const Header = () => {
         {/* Desktop Navigation - Hidden on Mobile */}
         <nav className="hidden md:flex gap-8 items-center">
           <button
-            onClick={() => scrollToSection("product-listing")}
+            onClick={handleShopClick}
             className={`font-lato text-sm ${textColor} hover:opacity-60 transition-all duration-500`}
           >
             Shop
@@ -111,12 +146,15 @@ const Header = () => {
         </button>
 
         {/* Center Zone - Logo + Brand Name */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+        <button 
+          onClick={handleLogoClick}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center hover:opacity-80 transition-opacity"
+        >
           <div className={`w-12 h-12 rounded-full border ${showBackground ? "border-[#2C2C2C]" : "border-white/90"} flex items-center justify-center mb-1 transition-all duration-500`}>
             <span className={`font-tenor text-xs ${textColor} transition-all duration-500`}>LOGO</span>
           </div>
           <span className={`font-tenor text-xs ${textColor} tracking-wider transition-all duration-500`}>BRAND NAME</span>
-        </div>
+        </button>
 
         {/* Desktop Right Zone - All Icons */}
         <div className="hidden md:flex gap-6 items-center">
@@ -220,7 +258,7 @@ const Header = () => {
         }}
         user={user}
         onSignOut={handleSignOut}
-        onShopClick={() => scrollToSection("product-listing")}
+        onShopClick={handleShopClick}
         onContactClick={() => scrollToSection("footer-contact")}
       />
 

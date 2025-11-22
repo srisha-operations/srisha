@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
+import { X } from "lucide-react";
 
 interface AuthModalProps {
   open: boolean;
@@ -23,6 +24,12 @@ const AuthModal = ({ open, onOpenChange, defaultView = "signin", onAuthSuccess }
     phone: "",
     password: "",
   });
+
+  useEffect(() => {
+    if (open) {
+      setView(defaultView);
+    }
+  }, [open, defaultView]);
 
   const handleGoogleAuth = () => {
     // UI-only placeholder
@@ -50,21 +57,27 @@ const AuthModal = ({ open, onOpenChange, defaultView = "signin", onAuthSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-background">
-        <DialogHeader>
-          <DialogTitle className="font-tenor text-2xl text-center tracking-wide">
-            {view === "signin" ? "Sign In" : "Sign Up"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-md bg-background p-0">
+        <DialogClose className="absolute top-4 right-4 rounded-sm opacity-70 hover:opacity-100 transition-opacity z-50">
+          <X className="h-5 w-5" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
 
-        <div className="space-y-6 py-4">
-          {/* Google Auth Button */}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full font-lato"
-            onClick={handleGoogleAuth}
-          >
+        <div className="p-6">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="font-tenor text-2xl text-center tracking-wide">
+              {view === "signin" ? "Sign In" : "Sign Up"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Google Auth Button */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full font-lato py-6"
+              onClick={handleGoogleAuth}
+            >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path
                 fill="currentColor"
@@ -84,102 +97,107 @@ const AuthModal = ({ open, onOpenChange, defaultView = "signin", onAuthSuccess }
               />
             </svg>
             Continue with Google
-          </Button>
-
-          <div className="relative">
-            <Separator />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
-              OR
-            </span>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {view === "signup" && (
-              <div className="space-y-2">
-                <Label htmlFor="name" className="font-lato text-sm">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="font-lato"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="font-lato text-sm">
-                Email {view === "signin" && "or Phone"}
-              </Label>
-              <Input
-                id="email"
-                type="text"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                className="font-lato"
-              />
-            </div>
-
-            {view === "signup" && (
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="font-lato text-sm">
-                  Phone
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  required
-                  className="font-lato"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="password" className="font-lato text-sm">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                className="font-lato"
-              />
-            </div>
-
-            {view === "signin" && (
-              <button
-                type="button"
-                className="text-sm text-accent hover:underline font-lato"
-              >
-                Forgot password?
-              </button>
-            )}
-
-            <Button type="submit" className="w-full font-lato">
-              {view === "signin" ? "Sign In" : "Sign Up"}
             </Button>
-          </form>
 
-          {/* Toggle View */}
-          <p className="text-center text-sm font-lato text-muted-foreground">
-            {view === "signin" ? "New to Srisha?" : "Already registered?"}{" "}
-            <button
-              type="button"
-              onClick={() => setView(view === "signin" ? "signup" : "signin")}
-              className="text-accent hover:underline font-medium"
-            >
-              {view === "signin" ? "Sign Up" : "Sign In"}
-            </button>
-          </p>
+            <div className="relative">
+              <Separator className="my-6" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="bg-background px-4 text-sm text-muted-foreground font-lato">OR</span>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {view === "signup" && (
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="font-lato text-sm">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    className="font-lato"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="font-lato text-sm">
+                  {view === "signup" ? "Email" : "Email or Phone"}
+                </Label>
+                <Input
+                  id="email"
+                  type="text"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  placeholder={view === "signup" ? "Enter your email" : "Enter email or phone"}
+                  className="font-lato"
+                />
+              </div>
+
+              {view === "signup" && (
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="font-lato text-sm">
+                    Phone
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    required
+                    placeholder="Enter your phone"
+                    className="font-lato"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="font-lato text-sm">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  placeholder="Enter password"
+                  className="font-lato"
+                />
+              </div>
+
+              <Button type="submit" className="w-full font-tenor tracking-wide py-6 mt-6">
+                {view === "signin" ? "Sign In" : "Sign Up"}
+              </Button>
+
+              {view === "signin" && (
+                <button 
+                  type="button"
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors font-lato mt-3"
+                >
+                  Forgot password?
+                </button>
+              )}
+
+              <div className="pt-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => setView(view === "signin" ? "signup" : "signin")}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors font-lato"
+                >
+                  {view === "signin" ? "New to SRISHA? " : "Already registered? "}
+                  <span className="font-medium text-foreground">
+                    {view === "signin" ? "Sign Up" : "Sign In"}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

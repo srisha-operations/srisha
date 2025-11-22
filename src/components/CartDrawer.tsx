@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { AspectRatio } from "./ui/aspect-ratio";
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import productsData from "@/data/products.json";
 
 interface CartDrawerProps {
@@ -69,18 +70,24 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {inquiryProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="flex gap-4 border-b border-border pb-4 last:border-0"
+                className="flex gap-4 items-start pb-6 border-b border-border last:border-0"
               >
-                <div className="flex-shrink-0 w-12 text-center">
-                  <span className="font-lato text-sm text-muted-foreground">
+                <div className="flex-shrink-0 w-8 text-center pt-2">
+                  <span className="font-lato text-sm font-medium text-muted-foreground">
                     {index + 1}
                   </span>
                 </div>
-                <div className="w-20 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    // TODO: Open product detail modal
+                    console.log("Open product:", product.id);
+                  }}
+                  className="w-24 flex-shrink-0 hover:opacity-80 transition-opacity"
+                >
                   <AspectRatio ratio={4 / 5}>
                     <img
                       src={product.thumbDefault}
@@ -88,8 +95,8 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
                       className="w-full h-full object-cover"
                     />
                   </AspectRatio>
-                </div>
-                <div className="flex-1 min-w-0">
+                </button>
+                <div className="flex-1 min-w-0 pt-1">
                   <button
                     onClick={() => {
                       // TODO: Open product detail modal
@@ -97,20 +104,21 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
                     }}
                     className="text-left hover:opacity-80 transition-opacity block w-full"
                   >
-                    <h4 className="font-tenor text-base text-foreground mb-1 truncate">
+                    <h4 className="font-tenor text-lg text-foreground mb-1">
                       {product.name}
                     </h4>
-                    <p className="text-sm text-muted-foreground">{product.price}</p>
+                    <p className="text-base text-muted-foreground">{product.price}</p>
                   </button>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 pt-1">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => handleRemove(product.id)}
-                    className="font-lato text-xs text-destructive hover:text-destructive"
+                    className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    title="Remove"
                   >
-                    Remove
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
