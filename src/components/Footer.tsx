@@ -3,7 +3,7 @@ import footerData from "@/data/footer.json";
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-background border-t border-border">
+    <footer id="footer-contact" className="w-full bg-background border-t border-border">
       <div className="container mx-auto px-4 py-16 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
           {/* Quick Links */}
