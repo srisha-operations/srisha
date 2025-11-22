@@ -20,7 +20,7 @@ const HeroSection = () => {
   }, [api]);
 
   return (
-    <section className="w-full h-screen relative overflow-hidden">
+    <section id="hero" className="w-full h-screen relative overflow-hidden">
       {/* Full-Bleed Background Carousel */}
       <Carousel 
         setApi={setApi}
@@ -51,10 +51,10 @@ const HeroSection = () => {
       </Carousel>
 
       {/* Overlay Content Container */}
-      <div className="relative h-full flex flex-col justify-center items-center px-4 md:px-8 lg:px-16 xl:px-24 lg:justify-between lg:pt-40 lg:pb-24">
+      <div className="relative h-full flex flex-col justify-end items-center px-4 md:px-8 pb-16 md:pb-20 lg:justify-between lg:items-start lg:pt-40 lg:pb-24 lg:px-16 xl:px-24">
         
         {/* Vision Statement */}
-        <div className="w-full lg:w-1/3 text-center lg:text-left mb-8 lg:mb-0">
+        <div className="w-full text-center mb-6 lg:w-1/3 lg:text-left lg:mb-0">
           <h1 className="font-tenor text-4xl lg:text-5xl xl:text-6xl text-white/90 mb-4">
             {content.hero.heading}
           </h1>
@@ -64,7 +64,7 @@ const HeroSection = () => {
         </div>
 
         {/* Bottom Content - CTA and Scroll Indicator */}
-        <div className="flex flex-col items-center gap-8 lg:gap-12">
+        <div className="flex flex-col items-center gap-8 lg:gap-12 lg:self-center">
           {/* CTA Button */}
           <Button 
             onClick={() => {
