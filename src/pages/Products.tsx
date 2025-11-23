@@ -229,6 +229,24 @@ const Products = () => {
                 <Label htmlFor="newest" className="font-lato">Newest First</Label>
               </div>
             </RadioGroup>
+            
+            <div className="flex gap-3 mt-8">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSortBy("default");
+                }}
+                className="flex-1 font-lato"
+              >
+                Clear All
+              </Button>
+              <Button
+                onClick={() => setIsSortOpen(false)}
+                className="flex-1 font-tenor"
+              >
+                Apply
+              </Button>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
@@ -281,6 +299,27 @@ const Products = () => {
                   <Label htmlFor="in-stock" className="font-lato text-sm">In Stock</Label>
                 </div>
               </div>
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Clear all filters logic
+                  document.querySelectorAll('input[type="checkbox"]').forEach((el: any) => {
+                    el.checked = false;
+                  });
+                }}
+                className="flex-1 font-lato"
+              >
+                Clear All
+              </Button>
+              <Button
+                onClick={() => setIsFilterOpen(false)}
+                className="flex-1 font-tenor"
+              >
+                Apply
+              </Button>
             </div>
           </div>
         </SheetContent>

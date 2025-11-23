@@ -1,4 +1,8 @@
 {
+  "brand": {
+    "name": "SRISHA",
+    "logo": "/logo.svg"
+  },
   "hero": {
     "heading": "Vision Statement",
     "subheading": "Description",

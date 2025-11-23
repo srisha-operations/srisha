@@ -103,6 +103,10 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+  
+  img {
+    @apply transition-opacity duration-300;
+  }
 }
 
 /* Smooth carousel transitions */

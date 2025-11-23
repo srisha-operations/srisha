@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Search, Heart, ShoppingBag, User, Menu, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import contentData from "@/data/content.json";
 import MobileNav from "./MobileNav";
 import SearchBar from "./SearchBar";
 import WishlistDrawer from "./WishlistDrawer";
@@ -29,6 +30,7 @@ const Header = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authView, setAuthView] = useState<"signin" | "signup">("signin");
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [content, setContent] = useState(contentData);
   
   const isProductsPage = location.pathname === "/products";
 
@@ -48,6 +50,16 @@ const Header = () => {
         setUser(JSON.parse(stored));
       } catch {
         setUser(null);
+      }
+    }
+    
+    // Load custom content if available
+    const adminContent = localStorage.getItem("admin_content");
+    if (adminContent) {
+      try {
+        setContent(JSON.parse(adminContent));
+      } catch {
+        setContent(contentData);
       }
     }
 
@@ -148,12 +160,18 @@ const Header = () => {
         {/* Center Zone - Logo + Brand Name */}
         <button 
           onClick={handleLogoClick}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center hover:opacity-80 transition-opacity"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
-          <div className={`w-12 h-12 rounded-full border ${showBackground ? "border-[#2C2C2C]" : "border-white/90"} flex items-center justify-center mb-1 transition-all duration-500`}>
-            <span className={`font-tenor text-xs ${textColor} transition-all duration-500`}>LOGO</span>
-          </div>
-          <span className={`font-tenor text-xs ${textColor} tracking-wider transition-all duration-500`}>BRAND NAME</span>
+          {content.brand?.logo && (
+            <img 
+              src={content.brand.logo} 
+              alt={content.brand?.name || "SRISHA"} 
+              className="h-10 w-auto object-contain" 
+            />
+          )}
+          <span className={`font-tenor text-xl ${textColor} tracking-wider transition-all duration-500`}>
+            {content.brand?.name || "SRISHA"}
+          </span>
         </button>
 
         {/* Desktop Right Zone - All Icons */}
