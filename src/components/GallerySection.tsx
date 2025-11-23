@@ -7,7 +7,7 @@ const GallerySection = () => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <section className="w-full bg-background pt-[60px] pb-[60px]">
+    <section className="w-full bg-background py-[100px]">
       <div className="container mx-auto px-4">
         {/* Section Title with Collapse Toggle */}
         <div className="flex items-center justify-center mb-12 md:mb-24 relative">
@@ -28,11 +28,12 @@ const GallerySection = () => {
         {/* Block 1: Collapsible 16:9 Hero */}
         <div className="relative w-full mb-16 md:mb-24">
           <div className="relative w-full aspect-video overflow-hidden">
-            <img
-              src={images.gallery.hero_block.path}
-              alt={images.gallery.hero_block.alt}
-              className="w-full h-full object-cover object-center transition-all duration-700"
-            />
+              <img
+                src={images.gallery.hero_block.path}
+                alt={images.gallery.hero_block.alt}
+                className="w-full h-full object-cover object-center transition-opacity duration-300"
+                loading="lazy"
+              />
             {!isExpanded && (
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/50 flex items-center justify-center transition-opacity duration-700">
                 <Button

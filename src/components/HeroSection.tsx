@@ -53,12 +53,12 @@ const HeroSection = () => {
       {/* Overlay Content Container */}
       <div className="relative h-full flex flex-col justify-end items-center px-4 md:px-8 pb-16 md:pb-20 lg:justify-between lg:items-start lg:pt-40 lg:pb-24 lg:px-16 xl:px-24">
         
-        {/* Vision Statement */}
-        <div className="w-full text-center mb-6 lg:w-1/3 lg:text-left lg:mb-0">
-          <h1 className="font-tenor text-4xl lg:text-5xl xl:text-6xl text-white/90 mb-4">
+        {/* Vision Statement - Mobile: above button, Desktop: left side */}
+        <div className="w-full text-center mb-8 lg:w-1/3 lg:text-left lg:mb-0 lg:order-first">
+          <h1 className="font-tenor text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-white/90 mb-3 lg:mb-4">
             {content.hero.heading}
           </h1>
-          <p className="font-lato text-base lg:text-lg text-white/80">
+          <p className="font-lato text-sm md:text-base lg:text-lg text-white/80">
             {content.hero.subheading}
           </p>
         </div>
