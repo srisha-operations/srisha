@@ -1,5 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Heart, ShoppingBag, User, Menu, ChevronDown } from "lucide-react";
+import {
+  Search,
+  Heart,
+  ShoppingBag,
+  User,
+  Menu,
+  ChevronDown,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import contentData from "@/data/content.json";
 import MobileNav from "./MobileNav";
@@ -14,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { supabase } from "@/lib/supabaseClient";
 
 // localStorage key: srisha_user
 const USER_KEY = "srisha_user";
@@ -29,9 +37,12 @@ const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authView, setAuthView] = useState<"signin" | "signup">("signin");
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(
+    null
+  );
   const [content, setContent] = useState(contentData);
-  
+  const [brand, setBrand] = useState<any>(null);
+
   const isProductsPage = location.pathname === "/products";
 
   useEffect(() => {
@@ -43,7 +54,24 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    // Load user from localStorage
+    const loadBrand = async () => {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("value")
+        .eq("key", "brand")
+        .single();
+
+      if (!error && data?.value) {
+        setBrand(data.value);
+      }
+    };
+
+    loadBrand();
+  }, []);
+
+  // Load stored user + local content
+  useEffect(() => {
+    // Load user
     const stored = localStorage.getItem(USER_KEY);
     if (stored) {
       try {
@@ -52,8 +80,8 @@ const Header = () => {
         setUser(null);
       }
     }
-    
-    // Load custom content if available
+
+    // Load custom content (if still needed)
     const adminContent = localStorage.getItem("admin_content");
     if (adminContent) {
       try {
@@ -63,18 +91,16 @@ const Header = () => {
       }
     }
 
-    // Listen for cart drawer and auth modal open events
-    const handleOpenCart = () => {
-      setIsCartOpen(true);
-    };
-    
+    // Drawer + Auth modal events
+    const handleOpenCart = () => setIsCartOpen(true);
     const handleOpenAuth = () => {
       setAuthView("signin");
       setIsAuthModalOpen(true);
     };
-    
+
     window.addEventListener("openCartDrawer", handleOpenCart);
     window.addEventListener("openAuthModal", handleOpenAuth);
+
     return () => {
       window.removeEventListener("openCartDrawer", handleOpenCart);
       window.removeEventListener("openAuthModal", handleOpenAuth);
@@ -119,13 +145,14 @@ const Header = () => {
     setUser(userData);
   };
 
-  const showBackground = isScrolled || isHovered || isSearchOpen || isProductsPage;
+  const showBackground =
+    isScrolled || isHovered || isSearchOpen || isProductsPage;
   const textColor = showBackground ? "text-[#2C2C2C]" : "text-white/90";
   const iconColor = showBackground ? "#2C2C2C" : "#FFFFFF";
 
   return (
     <>
-      <header 
+      <header
         className={`w-full h-20 flex items-center justify-between px-8 lg:px-16 xl:px-24 fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           showBackground ? "bg-[#F8F5F0] shadow-sm" : "bg-transparent"
         }`}
@@ -154,23 +181,30 @@ const Header = () => {
           onClick={() => setIsMobileNavOpen(true)}
           aria-label="Menu"
         >
-          <Menu className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
+          <Menu
+            className="w-5 h-5 transition-all duration-500"
+            strokeWidth={1.5}
+            style={{ color: iconColor }}
+          />
         </button>
 
         {/* Center Zone - Logo + Brand Name */}
-        <button 
+        <button
           onClick={handleLogoClick}
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
-          {content.brand?.logo && (
-            <img 
-              src={content.brand.logo} 
-              alt={content.brand?.name || "SRISHA"} 
-              className="h-10 w-auto object-contain" 
+          {brand?.logo && (
+            <img
+              src={brand.logo}
+              alt={brand.name || "SRISHA"}
+              className="h-10 w-auto object-contain"
             />
           )}
-          <span className={`font-tenor text-xl ${textColor} tracking-wider transition-all duration-500`}>
-            {content.brand?.name || "SRISHA"}
+
+          <span
+            className={`font-tenor text-xl ${textColor} tracking-wider transition-all duration-500`}
+          >
+            {brand?.name || "SRISHA"}
           </span>
         </button>
 
@@ -181,27 +215,42 @@ const Header = () => {
             className="hover:opacity-60 transition-opacity"
             aria-label="Search"
           >
-            <Search className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
+            <Search
+              className="w-5 h-5 transition-all duration-500"
+              strokeWidth={1.5}
+              style={{ color: iconColor }}
+            />
           </button>
           <button
             onClick={() => setIsWishlistOpen(true)}
             className="hover:opacity-60 transition-opacity"
             aria-label="Wishlist"
           >
-            <Heart className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
+            <Heart
+              className="w-5 h-5 transition-all duration-500"
+              strokeWidth={1.5}
+              style={{ color: iconColor }}
+            />
           </button>
           <button
             onClick={() => setIsCartOpen(true)}
             className="hover:opacity-60 transition-opacity"
             aria-label="Shopping Bag"
           >
-            <ShoppingBag className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
+            <ShoppingBag
+              className="w-5 h-5 transition-all duration-500"
+              strokeWidth={1.5}
+              style={{ color: iconColor }}
+            />
           </button>
 
           {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="hover:opacity-60 transition-opacity flex items-center gap-1" aria-label="Profile">
+              <button
+                className="hover:opacity-60 transition-opacity flex items-center gap-1"
+                aria-label="Profile"
+              >
                 {user ? (
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-tenor transition-all duration-500"
@@ -213,7 +262,11 @@ const Header = () => {
                     {user.name.substring(0, 2).toUpperCase()}
                   </div>
                 ) : (
-                  <User className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
+                  <User
+                    className="w-5 h-5 transition-all duration-500"
+                    strokeWidth={1.5}
+                    style={{ color: iconColor }}
+                  />
                 )}
               </button>
             </DropdownMenuTrigger>
@@ -224,7 +277,10 @@ const Header = () => {
                     Signed in as {user.name}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="font-lato">
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="font-lato"
+                  >
                     Sign Out
                   </DropdownMenuItem>
                 </>
@@ -260,7 +316,11 @@ const Header = () => {
           className="md:hidden hover:opacity-60 transition-opacity"
           aria-label="Search"
         >
-          <Search className="w-5 h-5 transition-all duration-500" strokeWidth={1.5} style={{ color: iconColor }} />
+          <Search
+            className="w-5 h-5 transition-all duration-500"
+            strokeWidth={1.5}
+            style={{ color: iconColor }}
+          />
         </button>
       </header>
 
@@ -292,7 +352,10 @@ const Header = () => {
 
       {/* Backdrop blur for drawers */}
       {(isWishlistOpen || isCartOpen) && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" style={{ pointerEvents: 'none' }} />
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+          style={{ pointerEvents: "none" }}
+        />
       )}
     </>
   );

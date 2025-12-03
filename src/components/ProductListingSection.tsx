@@ -2,16 +2,36 @@ import { useState, useEffect, useRef } from "react";
 import ProductCard from "./ProductCard";
 import ProductDetailModal from "./ProductDetailModal";
 import { Button } from "./ui/button";
-import productsData from "@/data/products.json";
+import { supabase } from "@/lib/supabaseClient";
 import { Link } from "react-router-dom";
 
 // localStorage key: srisha_wishlist
 const WISHLIST_KEY = "srisha_wishlist";
 
+const mapProductForCard = (p: any) => {
+  const images = p.product_images || [];
+  const sorted = [...images].sort(
+    (a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)
+  );
+  const defaultImg =
+    sorted.find((i: any) => !i?.is_hover)?.url || sorted[0]?.url || "";
+  const hoverImg =
+    sorted.find((i: any) => i?.is_hover)?.url || sorted[1]?.url || defaultImg;
+
+  return {
+    ...p, // keep full object so modal can still use variants/images if needed
+    thumbDefault: defaultImg,
+    thumbHover: hoverImg,
+  };
+};
+
 const ProductListingSection = () => {
-  const [wishlistState, setWishlistState] = useState<Record<string, boolean>>({});
+  const [wishlistState, setWishlistState] = useState<Record<string, boolean>>(
+    {}
+  );
   const [isHovered, setIsHovered] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<typeof productsData.products[0] | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
@@ -38,8 +58,15 @@ const ProductListingSection = () => {
       setIsModalOpen(true);
     };
 
-    window.addEventListener("openProductModal", handleOpenProductModal as EventListener);
-    return () => window.removeEventListener("openProductModal", handleOpenProductModal as EventListener);
+    window.addEventListener(
+      "openProductModal",
+      handleOpenProductModal as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        "openProductModal",
+        handleOpenProductModal as EventListener
+      );
   }, []);
 
   const toggleWishlist = (id: string) => {
@@ -48,16 +75,48 @@ const ProductListingSection = () => {
         ...prev,
         [id]: !prev[id],
       };
-      
+
       // Save to localStorage
       const wishlistIds = Object.keys(newState).filter((key) => newState[key]);
       localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistIds));
-      
+
       return newState;
     });
   };
 
-  const handleProductClick = (product: typeof productsData.products[0]) => {
+  useEffect(() => {
+    const loadProducts = async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select(
+          `
+        *,
+        product_images (*),
+        product_variants (*)
+      `
+        )
+        .order("product_id", { ascending: false });
+
+      if (!error && data) {
+        const mapped = data.map((p) => {
+          const defaultImg = p.product_images?.find((img) => !img.is_hover);
+          const hoverImg = p.product_images?.find((img) => img.is_hover);
+
+          return {
+            ...p,
+            thumbDefault: defaultImg?.url || "",
+            thumbHover: hoverImg?.url || defaultImg?.url || "",
+          };
+        });
+
+        setProducts(mapped);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  const handleProductClick = (product: any) => {
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
@@ -73,12 +132,15 @@ const ProductListingSection = () => {
     const autoScroll = () => {
       if (!isHovered && scrollContainer) {
         scrollPosition += scrollSpeed;
-        
+
         // Reset scroll when reaching end for seamless loop
-        if (scrollPosition >= scrollContainer.scrollWidth / 2) {
+        if (
+          scrollPosition >=
+          scrollContainer.scrollWidth - scrollContainer.clientWidth
+        ) {
           scrollPosition = 0;
         }
-        
+
         scrollContainer.scrollLeft = scrollPosition;
       }
       animationRef.current = requestAnimationFrame(autoScroll);
@@ -106,31 +168,30 @@ const ProductListingSection = () => {
         </h2>
 
         {/* Horizontal Scrollable Product Grid */}
-        <div 
+        <div
           className="relative"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          
           {/* Scrollable container */}
-          <div 
+          <div
             ref={scrollRef}
             className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide"
             style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch'
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             <div className="flex gap-5 md:gap-8">
               {/* Duplicate products for seamless loop on desktop */}
-              {[...productsData.products, ...productsData.products].map((product, index) => (
+              {products.map((product, index) => (
                 <div
                   key={`${product.id}-${index}`}
                   className="w-[45vw] md:w-[22vw] flex-shrink-0"
                 >
                   <ProductCard
-                    product={product}
+                    product={mapProductForCard(product)}
                     isWishlisted={wishlistState[product.id] || false}
                     onToggleWishlist={() => toggleWishlist(product.id)}
                     onProductClick={handleProductClick}

@@ -5,27 +5,49 @@ import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Grid3x3, List, MessageSquare } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import productsData from "@/data/products.json";
+import { supabase } from "@/lib/supabaseClient";
 
 type ViewMode = "grid" | "list";
 
 const Products = () => {
-  const [products, setProducts] = useState(productsData.products);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState<string>("default");
-  const [selectedProduct, setSelectedProduct] = useState<typeof productsData.products[0] | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
 
   const WISHLIST_KEY = "srisha_wishlist";
+
+  const mapProductForCard = (p: any) => {
+    const images = p.product_images || [];
+    const sorted = [...images].sort(
+      (a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)
+    );
+    const defaultImg =
+      sorted.find((i: any) => !i?.is_hover)?.url || sorted[0]?.url || "";
+    const hoverImg =
+      sorted.find((i: any) => i?.is_hover)?.url || sorted[1]?.url || defaultImg;
+
+    return {
+      ...p, // keep full object so modal can still use variants/images if needed
+      thumbDefault: defaultImg,
+      thumbHover: hoverImg,
+    };
+  };
 
   useEffect(() => {
     loadWishlist();
@@ -43,41 +65,75 @@ const Products = () => {
   };
 
   useEffect(() => {
-    let sorted = [...productsData.products];
+    const loadProducts = async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select(
+          `
+        *,
+        product_images (*),
+        product_variants (*)
+      `
+        )
+        .order("product_id", { ascending: false });
+
+      if (!error && data) {
+        const mapped = data.map((p) => {
+          const defaultImg = p.product_images?.find((img) => !img.is_hover);
+          const hoverImg = p.product_images?.find((img) => img.is_hover);
+
+          return {
+            ...p,
+            thumbDefault: defaultImg?.url || "",
+            thumbHover: hoverImg?.url || defaultImg?.url || "",
+          };
+        });
+
+        setProducts(mapped);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  useEffect(() => {
+    let sorted = [...products];
 
     if (sortBy === "price-asc") {
       sorted.sort((a, b) => {
-        const priceA = parseInt(a.price.replace(/[^0-9]/g, ""));
-        const priceB = parseInt(b.price.replace(/[^0-9]/g, ""));
+        const priceA = a.price;
+        const priceB = b.price;
         return priceA - priceB;
       });
     } else if (sortBy === "price-desc") {
       sorted.sort((a, b) => {
-        const priceA = parseInt(a.price.replace(/[^0-9]/g, ""));
-        const priceB = parseInt(b.price.replace(/[^0-9]/g, ""));
+        const priceA = a.price;
+        const priceB = b.price;
         return priceB - priceA;
       });
     } else if (sortBy === "newest") {
-      sorted.sort((a, b) => b.order - a.order);
+      sorted.sort((a, b) => b.product_id - a.product_id);
     }
 
     setProducts(sorted);
   }, [sortBy]);
 
-  const handleProductClick = (product: typeof productsData.products[0]) => {
+  const handleProductClick = (product: any) => {
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
 
   const handleInquire = (productName: string) => {
-    const message = encodeURIComponent(`I would like to inquire about ${productName}`);
+    const message = encodeURIComponent(
+      `I would like to inquire about ${productName}`
+    );
     window.open(`https://wa.me/PHONE_NUMBER?text=${message}`, "_blank");
   };
 
   return (
     <div className="w-full min-h-screen bg-background">
       <Header />
-      
+
       <main className="pt-24 pb-[100px] px-8 lg:px-16 xl:px-24">
         {/* Header Bar */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-12 gap-4">
@@ -100,13 +156,15 @@ const Products = () => {
             >
               Filter
             </Button>
-            
+
             {/* View Mode Toggle */}
             <div className="flex border border-border rounded">
               <button
                 onClick={() => setViewMode("grid")}
                 className={`p-2 transition-colors ${
-                  viewMode === "grid" ? "bg-foreground text-background" : "hover:bg-muted"
+                  viewMode === "grid"
+                    ? "bg-foreground text-background"
+                    : "hover:bg-muted"
                 }`}
                 aria-label="Grid view"
               >
@@ -115,7 +173,9 @@ const Products = () => {
               <button
                 onClick={() => setViewMode("list")}
                 className={`p-2 transition-colors ${
-                  viewMode === "list" ? "bg-foreground text-background" : "hover:bg-muted"
+                  viewMode === "list"
+                    ? "bg-foreground text-background"
+                    : "hover:bg-muted"
                 }`}
                 aria-label="List view"
               >
@@ -131,7 +191,7 @@ const Products = () => {
             {products.map((product) => (
               <ProductCard
                 key={product.id}
-                product={product}
+                product={mapProductForCard(product)}
                 isWishlisted={wishlistIds.includes(product.id)}
                 onToggleWishlist={() => {
                   const stored = localStorage.getItem(WISHLIST_KEY);
@@ -142,7 +202,10 @@ const Products = () => {
                     loadWishlist();
                   } else {
                     wishlist.push(product.id);
-                    localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+                    localStorage.setItem(
+                      WISHLIST_KEY,
+                      JSON.stringify(wishlist)
+                    );
                     loadWishlist();
                   }
                 }}
@@ -179,10 +242,13 @@ const Products = () => {
                       <h3 className="font-tenor text-xl text-foreground mb-2 group-hover:opacity-70 transition-opacity">
                         {product.name}
                       </h3>
-                      <p className="font-lato text-muted-foreground mb-3">{product.price}</p>
+                      <p className="font-lato text-muted-foreground mb-3">
+                        {product.price}
+                      </p>
                     </button>
                     <p className="font-lato text-sm text-muted-foreground">
-                      Exquisite handcrafted piece featuring intricate detailing and premium fabrics.
+                      Exquisite handcrafted piece featuring intricate detailing
+                      and premium fabrics.
                     </p>
                   </div>
 
@@ -207,29 +273,39 @@ const Products = () => {
       <Sheet open={isSortOpen} onOpenChange={setIsSortOpen}>
         <SheetContent side="right" className="w-[340px]">
           <SheetHeader>
-            <SheetTitle className="font-tenor text-xl tracking-wide">Sort By</SheetTitle>
+            <SheetTitle className="font-tenor text-xl tracking-wide">
+              Sort By
+            </SheetTitle>
           </SheetHeader>
 
           <div className="mt-6">
             <RadioGroup value={sortBy} onValueChange={setSortBy}>
               <div className="flex items-center space-x-2 mb-4">
                 <RadioGroupItem value="default" id="default" />
-                <Label htmlFor="default" className="font-lato">Default</Label>
+                <Label htmlFor="default" className="font-lato">
+                  Default
+                </Label>
               </div>
               <div className="flex items-center space-x-2 mb-4">
                 <RadioGroupItem value="price-asc" id="price-asc" />
-                <Label htmlFor="price-asc" className="font-lato">Price: Low to High</Label>
+                <Label htmlFor="price-asc" className="font-lato">
+                  Price: Low to High
+                </Label>
               </div>
               <div className="flex items-center space-x-2 mb-4">
                 <RadioGroupItem value="price-desc" id="price-desc" />
-                <Label htmlFor="price-desc" className="font-lato">Price: High to Low</Label>
+                <Label htmlFor="price-desc" className="font-lato">
+                  Price: High to Low
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="newest" id="newest" />
-                <Label htmlFor="newest" className="font-lato">Newest First</Label>
+                <Label htmlFor="newest" className="font-lato">
+                  Newest First
+                </Label>
               </div>
             </RadioGroup>
-            
+
             <div className="flex gap-3 mt-8">
               <Button
                 variant="outline"
@@ -255,7 +331,9 @@ const Products = () => {
       <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
         <SheetContent side="right" className="w-[340px]">
           <SheetHeader>
-            <SheetTitle className="font-tenor text-xl tracking-wide">Filter</SheetTitle>
+            <SheetTitle className="font-tenor text-xl tracking-wide">
+              Filter
+            </SheetTitle>
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
@@ -264,15 +342,21 @@ const Products = () => {
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox id="saree" />
-                  <Label htmlFor="saree" className="font-lato text-sm">Saree</Label>
+                  <Label htmlFor="saree" className="font-lato text-sm">
+                    Saree
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox id="lehenga" />
-                  <Label htmlFor="lehenga" className="font-lato text-sm">Lehenga</Label>
+                  <Label htmlFor="lehenga" className="font-lato text-sm">
+                    Lehenga
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox id="kurta" />
-                  <Label htmlFor="kurta" className="font-lato text-sm">Kurta Set</Label>
+                  <Label htmlFor="kurta" className="font-lato text-sm">
+                    Kurta Set
+                  </Label>
                 </div>
               </div>
             </div>
@@ -282,11 +366,15 @@ const Products = () => {
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox id="beige" />
-                  <Label htmlFor="beige" className="font-lato text-sm">Beige</Label>
+                  <Label htmlFor="beige" className="font-lato text-sm">
+                    Beige
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox id="ivory" />
-                  <Label htmlFor="ivory" className="font-lato text-sm">Ivory</Label>
+                  <Label htmlFor="ivory" className="font-lato text-sm">
+                    Ivory
+                  </Label>
                 </div>
               </div>
             </div>
@@ -296,19 +384,23 @@ const Products = () => {
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox id="in-stock" />
-                  <Label htmlFor="in-stock" className="font-lato text-sm">In Stock</Label>
+                  <Label htmlFor="in-stock" className="font-lato text-sm">
+                    In Stock
+                  </Label>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex gap-3 pt-4">
               <Button
                 variant="outline"
                 onClick={() => {
                   // Clear all filters logic
-                  document.querySelectorAll('input[type="checkbox"]').forEach((el: any) => {
-                    el.checked = false;
-                  });
+                  document
+                    .querySelectorAll('input[type="checkbox"]')
+                    .forEach((el: any) => {
+                      el.checked = false;
+                    });
                 }}
                 className="flex-1 font-lato"
               >

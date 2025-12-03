@@ -19,13 +19,32 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-interface Product {
+type ProductImage = {
+  id?: string;
+  url?: string;
+  is_hover?: boolean;
+  position?: number;
+};
+
+type ProductVariant = {
+  id?: string;
+  size?: string;
+  color?: string;
+  stock?: number;
+  visible?: boolean;
+};
+
+type Product = {
   id: string;
+  product_id?: number;
   name: string;
-  price: string;
-  thumbDefault: string;
-  thumbHover: string;
-}
+  price: number; // integer in DB (rupees)
+  slug?: string;
+  description?: string;
+  visible?: boolean;
+  product_images?: ProductImage[];
+  product_variants?: ProductVariant[];
+};
 
 interface ProductCardProps {
   product: Product;
@@ -34,8 +53,44 @@ interface ProductCardProps {
   onProductClick?: (product: Product) => void;
 }
 
-const ProductCard = ({ product, isWishlisted, onToggleWishlist, onProductClick }: ProductCardProps) => {
+const placeholder = (w = 800, h = 1000, text = "No image") =>
+  `https://placehold.co/${w}x${h}?text=${encodeURIComponent(text)}`;
+
+const formatPrice = (p: number) => {
+  // p is integer (rupees). Format e.g. 12999 -> ₹12,999
+  try {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(p);
+  } catch {
+    return `₹${p}`;
+  }
+};
+
+const ProductCard = ({
+  product,
+  isWishlisted,
+  onToggleWishlist,
+  onProductClick,
+}: ProductCardProps) => {
+  if (!product) return null;
+
   const [isHovered, setIsHovered] = useState(false);
+
+  // Determine default & hover images from product_images
+  const images = product?.product_images || [];
+  // sort by position so primary order is maintained
+  const sorted = [...images].sort(
+    (a, b) => (a?.position ?? 0) - (b?.position ?? 0)
+  );
+  const thumbDefault =
+    sorted.find((i) => !i?.is_hover)?.url ??
+    sorted[0]?.url ??
+    placeholder(800, 1000, "Product");
+  const thumbHover =
+    sorted.find((i) => i?.is_hover)?.url ?? sorted[1]?.url ?? thumbDefault;
 
   const handleProductClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -49,7 +104,7 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist, onProductClick }
     const INQUIRIES_KEY = "srisha_inquiries";
     const stored = localStorage.getItem(INQUIRIES_KEY);
     let inquiries: string[] = [];
-    
+
     if (stored) {
       try {
         inquiries = JSON.parse(stored);
@@ -57,58 +112,64 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist, onProductClick }
         inquiries = [];
       }
     }
-    
+
     if (!inquiries.includes(product.id)) {
       inquiries.push(product.id);
       localStorage.setItem(INQUIRIES_KEY, JSON.stringify(inquiries));
     }
 
-    // Open WhatsApp
-    const message = encodeURIComponent(`I would like to inquire about ${product.name}`);
+    // Open WhatsApp (replace PHONE_NUMBER)
+    const message = encodeURIComponent(
+      `I would like to inquire about ${product.name}`
+    );
     window.open(`https://wa.me/PHONE_NUMBER?text=${message}`, "_blank");
-    
+
     // Dispatch event to open cart drawer
     window.dispatchEvent(new CustomEvent("openCartDrawer"));
   };
 
   return (
-    <div 
+    <div
       className="group relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Container */}
-      <div className="relative overflow-hidden bg-muted mb-4 cursor-pointer" onClick={handleProductClick}>
-        <AspectRatio ratio={4/5}>
+      <div
+        className="relative overflow-hidden bg-muted mb-4 cursor-pointer"
+        onClick={handleProductClick}
+      >
+        <AspectRatio ratio={4 / 5}>
           <img
-            src={isHovered ? product.thumbHover : product.thumbDefault}
+            src={isHovered ? thumbHover : thumbDefault}
             alt={product.name}
             className="w-full h-full object-cover object-center transition-all duration-200"
             style={{
-              transitionProperty: 'opacity, transform',
-              transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+              transitionProperty: "opacity, transform",
+              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           />
-          
+
           {/* Wishlist Heart */}
           <button
-            onClick={onToggleWishlist}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleWishlist();
+            }}
             className={`absolute top-3 right-3 z-20 w-10 h-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200 ${
               isHovered ? "hover:scale-110" : ""
             }`}
             aria-label="Add to wishlist"
             style={{
-              transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
             <Heart
               className={`w-5 h-5 transition-all duration-200 ${
-                isWishlisted
-                  ? "fill-accent text-accent"
-                  : "text-foreground"
+                isWishlisted ? "fill-accent text-accent" : "text-foreground"
               } ${isHovered ? "scale-110" : ""}`}
               style={{
-                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             />
           </button>
@@ -116,10 +177,12 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist, onProductClick }
           {/* View Details Overlay (Desktop Hover) */}
           <div
             className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-6 transition-all duration-200 ${
-              isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              isHovered
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-4"
             }`}
             style={{
-              transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
             <Button
@@ -142,7 +205,9 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist, onProductClick }
           <h3 className="font-tenor text-lg md:text-xl text-foreground">
             {product.name}
           </h3>
-          <p className="text-muted-foreground text-sm mt-1">{product.price}</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            {formatPrice(product.price)}
+          </p>
         </div>
 
         {/* Inquire Button */}
@@ -151,7 +216,7 @@ const ProductCard = ({ product, isWishlisted, onToggleWishlist, onProductClick }
           variant="outline"
           className="w-full gap-2 hover:bg-secondary transition-all duration-150"
           style={{
-            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+            transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
           <WhatsAppIcon className="w-4 h-4" />

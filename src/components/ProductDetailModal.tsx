@@ -7,11 +7,10 @@ import { cn } from "@/lib/utils";
 interface Product {
   id: string;
   name: string;
-  price: string;
-  thumbDefault: string;
-  thumbHover?: string;
-  images?: string[];
-  wishlist: boolean;
+  price: number;
+  description?: string;
+  product_images: { url: string; is_hover?: boolean; position?: number }[];
+  product_variants: { size?: string; color?: string; stock?: number }[];
 }
 
 interface ProductDetailModalProps {
@@ -20,21 +19,41 @@ interface ProductDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalProps) => {
+const getImagesFromProduct = (product: any) => {
+  if (!product?.product_images) return [];
+
+  // Sort by position for consistent order
+  const sorted = [...product.product_images].sort(
+    (a, b) => (a.position ?? 0) - (b.position ?? 0)
+  );
+
+  return sorted.map((img) => img.url);
+};
+
+const ProductDetailModal = ({
+  product,
+  open,
+  onOpenChange,
+}: ProductDetailModalProps) => {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedImage, setSelectedImage] = useState<string>("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const sizes = Array.from(
+    new Set(product?.product_variants?.map((v) => v.size).filter(Boolean))
+  );
 
-  const sizes = ["S", "M", "L", "XL", "XXL"];
-  const allImages = product?.images || [product?.thumbDefault, product?.thumbHover].filter(Boolean) as string[];
+  const mainImages = product?.product_images || [];
+  const allImages = product ? getImagesFromProduct(product) : [];
 
   useEffect(() => {
     if (product && open) {
-      setSelectedImage(product.thumbDefault);
+      const imgs = getImagesFromProduct(product);
+
+      setSelectedImage(imgs[0] || "");
       setCurrentImageIndex(0);
       setSelectedSize("");
-      
+
       // Load wishlist status
       const wishlistData = localStorage.getItem("srisha_wishlist");
       if (wishlistData) {
@@ -46,10 +65,10 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
 
   const handleWishlistToggle = () => {
     if (!product) return;
-    
+
     const wishlistData = localStorage.getItem("srisha_wishlist");
     let wishlist = wishlistData ? JSON.parse(wishlistData) : [];
-    
+
     if (wishlist.includes(product.id)) {
       wishlist = wishlist.filter((id: string) => id !== product.id);
       setIsWishlisted(false);
@@ -57,14 +76,14 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
       wishlist.push(product.id);
       setIsWishlisted(true);
     }
-    
+
     localStorage.setItem("srisha_wishlist", JSON.stringify(wishlist));
     window.dispatchEvent(new Event("wishlistUpdated"));
   };
 
   const handleInquire = () => {
     if (!product) return;
-    
+
     // Check if user is signed in
     const userData = localStorage.getItem("srisha_user");
     if (!userData) {
@@ -76,33 +95,43 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
     // Add to inquiries
     const inquiriesData = localStorage.getItem("srisha_inquiries");
     let inquiries = inquiriesData ? JSON.parse(inquiriesData) : [];
-    
+
     if (!inquiries.includes(product.id)) {
       inquiries.push(product.id);
       localStorage.setItem("srisha_inquiries", JSON.stringify(inquiries));
-      
+
       // Add to admin inquiries with details
       const adminInquiriesData = localStorage.getItem("admin_inquiries");
-      let adminInquiries = adminInquiriesData ? JSON.parse(adminInquiriesData) : [];
+      let adminInquiries = adminInquiriesData
+        ? JSON.parse(adminInquiriesData)
+        : [];
       const user = JSON.parse(userData);
-      
+
       adminInquiries.push({
         id: Date.now().toString(),
         customerName: user.name || "Guest",
         contact: user.email || user.phone || "",
         date: new Date().toISOString(),
-        items: [{ productId: product.id, productName: product.name, size: selectedSize || "Not specified" }],
-        status: "Inquiry Received"
+        items: [
+          {
+            productId: product.id,
+            productName: product.name,
+            size: selectedSize || "Not specified",
+          },
+        ],
+        status: "Inquiry Received",
       });
-      
+
       localStorage.setItem("admin_inquiries", JSON.stringify(adminInquiries));
     }
-    
+
     // Open cart drawer
     window.dispatchEvent(new Event("openCartDrawer"));
-    
+
     // Open WhatsApp
-    const message = encodeURIComponent(`I would like to inquire about ${product.name}`);
+    const message = encodeURIComponent(
+      `I would like to inquire about ${product.name}`
+    );
     window.open(`https://wa.me/919000000000?text=${message}`, "_blank");
   };
 
@@ -112,8 +141,12 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-    setSelectedImage(allImages[(currentImageIndex - 1 + allImages.length) % allImages.length]);
+    setCurrentImageIndex(
+      (prev) => (prev - 1 + allImages.length) % allImages.length
+    );
+    setSelectedImage(
+      allImages[(currentImageIndex - 1 + allImages.length) % allImages.length]
+    );
   };
 
   if (!product) return null;
@@ -134,29 +167,35 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
               <div className="hidden lg:block">
                 <div className="w-full aspect-[4/5] mb-4 overflow-hidden">
                   <img
-                    src={selectedImage || product.thumbDefault}
+                    src={selectedImage}
                     alt={product.name}
                     className="w-full h-full object-cover transition-opacity duration-300"
                     loading="lazy"
                   />
                 </div>
-                
+
                 {/* Thumbnails */}
                 {allImages.length > 1 && (
                   <div className="flex gap-2 justify-start overflow-x-auto scrollbar-hide">
-                    {allImages.map((img, idx) => (
+                    {mainImages.map((img, idx) => (
                       <button
                         key={idx}
                         onClick={() => {
-                          setSelectedImage(img);
+                          setSelectedImage(img.url);
                           setCurrentImageIndex(idx);
                         }}
                         className={cn(
                           "flex-shrink-0 w-20 h-24 border-2 transition-all overflow-hidden",
-                          selectedImage === img ? "border-primary" : "border-transparent hover:border-muted-foreground"
+                          selectedImage === img.url
+                            ? "border-primary"
+                            : "border-transparent hover:border-muted-foreground"
                         )}
                       >
-                        <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                        <img
+                          src={img.url}
+                          alt={`${product.name} ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
                       </button>
                     ))}
                   </div>
@@ -167,12 +206,12 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
               <div className="lg:hidden">
                 <div className="relative w-full aspect-[4/5] overflow-hidden">
                   <img
-                    src={allImages[currentImageIndex]}
+                    src={mainImages[currentImageIndex]?.url}
                     alt={product.name}
                     className="w-full h-full object-cover transition-opacity duration-300"
                     loading="lazy"
                   />
-                  
+
                   {allImages.length > 1 && (
                     <>
                       <button
@@ -189,7 +228,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
                       >
                         <ChevronRight className="w-5 h-5 text-foreground" />
                       </button>
-                      
+
                       {/* Image counter */}
                       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 px-3 py-1 text-xs font-lato">
                         {currentImageIndex + 1} / {allImages.length}
@@ -202,12 +241,18 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
 
             {/* RIGHT: Product Details */}
             <div className="p-6 lg:p-8 flex flex-col">
-              <h2 className="text-2xl lg:text-3xl font-tenor text-foreground mb-2">{product.name}</h2>
-              <p className="text-xl lg:text-2xl font-lato text-foreground mb-6">{product.price}</p>
+              <h2 className="text-2xl lg:text-3xl font-tenor text-foreground mb-2">
+                {product.name}
+              </h2>
+              <p className="text-xl lg:text-2xl font-lato text-foreground mb-6">
+                {product.price}
+              </p>
 
               {/* Size Selection */}
               <div className="mb-6">
-                <label className="text-sm font-lato text-muted-foreground mb-3 block">SELECT SIZE</label>
+                <label className="text-sm font-lato text-muted-foreground mb-3 block">
+                  SELECT SIZE
+                </label>
                 <div className="flex gap-2 flex-wrap">
                   {sizes.map((size) => (
                     <button
@@ -228,9 +273,14 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
 
               {/* Color Selection */}
               <div className="mb-8">
-                <label className="text-sm font-lato text-muted-foreground mb-3 block">COLOR</label>
+                <label className="text-sm font-lato text-muted-foreground mb-3 block">
+                  COLOR
+                </label>
                 <div className="flex gap-2">
-                  <button className="w-10 h-10 border-2 border-primary bg-accent"></button>
+                  <button
+                    className="w-10 h-10 border-2 border-primary bg-accent"
+                    aria-label="Select color"
+                  ></button>
                 </div>
               </div>
 
@@ -241,7 +291,12 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
                   onClick={handleWishlistToggle}
                   className="flex-1 border-border text-foreground hover:bg-muted font-tenor"
                 >
-                  <Heart className={cn("w-4 h-4 mr-2", isWishlisted && "fill-current")} />
+                  <Heart
+                    className={cn(
+                      "w-4 h-4 mr-2",
+                      isWishlisted && "fill-current"
+                    )}
+                  />
                   WISHLIST
                 </Button>
                 <Button
@@ -254,11 +309,14 @@ const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalP
 
               {/* Description */}
               <div className="border-t border-border pt-6">
-                <h3 className="text-sm font-tenor text-foreground mb-3">DESCRIPTION</h3>
+                <h3 className="text-sm font-tenor text-foreground mb-3">
+                  DESCRIPTION
+                </h3>
                 <p className="text-sm font-lato text-muted-foreground leading-relaxed">
-                  This exquisite piece showcases traditional craftsmanship with contemporary design. 
-                  Each garment is carefully crafted with attention to detail, ensuring the highest quality 
-                  and timeless elegance.
+                  This exquisite piece showcases traditional craftsmanship with
+                  contemporary design. Each garment is carefully crafted with
+                  attention to detail, ensuring the highest quality and timeless
+                  elegance.
                 </p>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import images from "@/data/images.json";
 import content from "@/data/content.json";
 
-const HeroSection = () => {
+const HeroSection = ({ hero }: { hero: any }) => {
   const [api, setApi] = useState<CarouselApi>();
 
   useEffect(() => {
@@ -28,12 +28,12 @@ const HeroSection = () => {
         className="absolute inset-0"
       >
         <CarouselContent className="h-screen -ml-0">
-          {images.hero.carousel.map((image) => (
+          {hero?.images?.map((image, index) => (
             <CarouselItem key={image.id} className="h-screen pl-0">
               <div className="relative h-full w-full">
                 <img 
-                  src={image.path}
-                  alt={image.alt}
+                  src={image}
+                  alt="hero image" // or hero?.altTexts?.[index]
                   className="w-full h-full object-cover object-center transition-opacity duration-700"
                 />
               </div>
@@ -56,10 +56,10 @@ const HeroSection = () => {
         {/* Vision Statement - Mobile: above button, Desktop: left side */}
         <div className="w-full text-center mb-8 lg:w-1/3 lg:text-left lg:mb-0 lg:order-first">
           <h1 className="font-tenor text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-white/90 mb-3 lg:mb-4">
-            {content.hero.heading}
+            {hero?.heading}
           </h1>
           <p className="font-lato text-sm md:text-base lg:text-lg text-white/80">
-            {content.hero.subheading}
+            {hero?.heading}
           </p>
         </div>
 
@@ -73,7 +73,7 @@ const HeroSection = () => {
             }}
             className="font-tenor px-10 py-6 text-base border border-white/90 bg-transparent hover:bg-[#F3EEE6] text-white/90 hover:text-[#2C2C2C] tracking-wider transition-all duration-500 rounded-none"
           >
-            {content.hero.cta}
+            {hero?.cta}
           </Button>
 
           {/* Scroll Indicator */}
