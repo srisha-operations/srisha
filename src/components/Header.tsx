@@ -255,8 +255,9 @@ const Header = () => {
     ? user.user_metadata.name.substring(0, 2).toUpperCase()
     : user?.email?.substring(0, 2).toUpperCase();
 
+  const isCheckoutPage = location.pathname === "/checkout";
   const showBackground =
-    isScrolled || isHovered || isSearchOpen || isProductsPage;
+    isScrolled || isHovered || isSearchOpen || isProductsPage || isCheckoutPage;
 
   const textColor = showBackground ? "text-[#2C2C2C]" : "text-white/90";
   const iconColor = showBackground ? "#2C2C2C" : "#FFFFFF";
