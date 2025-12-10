@@ -24,6 +24,32 @@ const formatPrice = (p: number) => {
   }
 };
 
+const validateCheckoutForm = (shipping: any) => {
+  const errors: Record<string, string> = {};
+  
+  if (!shipping.name || shipping.name.trim().length < 2) {
+    errors.name = "Please enter your full name (min 2 characters).";
+  }
+  
+  if (!shipping.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shipping.email)) {
+    errors.email = "Please enter a valid email address.";
+  }
+  
+  if (!shipping.phone || !/^[6-9]\d{9}$/.test(shipping.phone)) {
+    errors.phone = "Please enter a valid 10-digit mobile number starting with 6-9.";
+  }
+  
+  if (!shipping.address_line1 || shipping.address_line1.trim().length < 5) {
+    errors.address_line1 = "Please enter your shipping address.";
+  }
+  
+  if (!shipping.pincode || !/^\d{6}$/.test(shipping.pincode)) {
+    errors.pincode = "PIN code must be 6 digits.";
+  }
+  
+  return errors;
+};
+
 const Checkout = () => {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +68,30 @@ const Checkout = () => {
     pincode: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
+
+  // Real-time validation
+  useEffect(() => {
+    if (mode === "normal") {
+      const validationErrors = validateCheckoutForm(shipping);
+      setErrors(validationErrors);
+      setIsFormValid(Object.keys(validationErrors).length === 0);
+    } else {
+      // For preorder, only require name/email/phone
+      const preorderErrors: Record<string, string> = {};
+      if (!shipping.name || shipping.name.trim().length < 2) {
+        preorderErrors.name = "Name required";
+      }
+      if (!shipping.email) {
+        preorderErrors.email = "Email required";
+      }
+      if (!shipping.phone) {
+        preorderErrors.phone = "Phone required";
+      }
+      setErrors(preorderErrors);
+      setIsFormValid(Object.keys(preorderErrors).length === 0);
+    }
+  }, [shipping, mode]);
 
   useEffect(() => {
     (async () => {
@@ -136,27 +186,20 @@ const Checkout = () => {
       }
 
       // Normal order flow - validate
-      const newErrors: Record<string, string> = {};
-      if (!shipping.name || shipping.name.trim().length < 2) {
-        newErrors.name = "Please enter your full name (min 2 characters).";
-      }
-      if (!shipping.phone || !/^[6-9]\d{9}$/.test(shipping.phone)) {
-        newErrors.phone = "Please enter a valid 10-digit mobile number starting with 6-9.";
-      }
-      if (!shipping.address_line1 || shipping.address_line1.trim().length < 5) {
-        newErrors.address_line1 = "Please enter your shipping address.";
-      }
-      if (shipping.pincode && !/^\d{6}$/.test(shipping.pincode)) {
-        newErrors.pincode = "PIN code must be 6 digits.";
-      }
+      const newErrors = validateCheckoutForm(shipping);
 
       if (Object.keys(newErrors).length) {
         setErrors(newErrors);
         setIsSubmitting(false);
-        // show first error as toast
-        const first = Object.values(newErrors)[0];
+        // show first error as toast and scroll to first error
+        const firstErrorKey = Object.keys(newErrors)[0];
+        const firstErrorElement = document.getElementById(firstErrorKey);
+        if (firstErrorElement) {
+          firstErrorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+          firstErrorElement.focus();
+        }
         const { toast } = await import("@/hooks/use-toast");
-        toast({ title: first });
+        toast({ title: "Validation Error", description: Object.values(newErrors)[0] });
         return;
       }
       setErrors({});
@@ -245,14 +288,14 @@ const Checkout = () => {
                   <h2 className="font-tenor text-2xl mb-6">Shipping Address</h2>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="name">Full Name *</Label>
                       <Input
                         id="name"
                         value={shipping.name}
                         onChange={(e) =>
                           setShipping({ ...shipping, name: e.target.value })
                         }
-                        className="mt-1"
+                        className={`mt-1 ${errors.name ? "border-red-500 focus:border-red-500" : ""}`}
                       />
                       {errors.name && (
                         <p className="text-destructive text-sm mt-1">{errors.name}</p>
@@ -260,7 +303,7 @@ const Checkout = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email">Email *</Label>
                       <Input
                         id="email"
                         type="email"
@@ -268,19 +311,22 @@ const Checkout = () => {
                         onChange={(e) =>
                           setShipping({ ...shipping, email: e.target.value })
                         }
-                        className="mt-1"
+                        className={`mt-1 ${errors.email ? "border-red-500 focus:border-red-500" : ""}`}
                       />
+                      {errors.email && (
+                        <p className="text-destructive text-sm mt-1">{errors.email}</p>
+                      )}
                     </div>
 
                     <div>
-                      <Label htmlFor="phone">Phone Number</Label>
+                      <Label htmlFor="phone">Phone Number *</Label>
                       <Input
                         id="phone"
                         value={shipping.phone}
                         onChange={(e) =>
                           setShipping({ ...shipping, phone: e.target.value })
                         }
-                        className="mt-1"
+                        className={`mt-1 ${errors.phone ? "border-red-500 focus:border-red-500" : ""}`}
                       />
                       {errors.phone && (
                         <p className="text-destructive text-sm mt-1">{errors.phone}</p>
@@ -288,14 +334,14 @@ const Checkout = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="address1">Address Line 1</Label>
+                      <Label htmlFor="address1">Address Line 1 *</Label>
                       <Input
                         id="address1"
                         value={shipping.address_line1}
                         onChange={(e) =>
                           setShipping({ ...shipping, address_line1: e.target.value })
                         }
-                        className="mt-1"
+                        className={`mt-1 ${errors.address_line1 ? "border-red-500 focus:border-red-500" : ""}`}
                       />
                       {errors.address_line1 && (
                         <p className="text-destructive text-sm mt-1">{errors.address_line1}</p>
@@ -340,14 +386,14 @@ const Checkout = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="pincode">PIN Code</Label>
+                      <Label htmlFor="pincode">PIN Code *</Label>
                       <Input
                         id="pincode"
                         value={shipping.pincode}
                         onChange={(e) =>
                           setShipping({ ...shipping, pincode: e.target.value })
                         }
-                        className="mt-1"
+                        className={`mt-1 ${errors.pincode ? "border-red-500 focus:border-red-500" : ""}`}
                       />
                       {errors.pincode && (
                         <p className="text-destructive text-sm mt-1">{errors.pincode}</p>
@@ -357,8 +403,8 @@ const Checkout = () => {
 
                   <Button
                     onClick={handlePlaceOrder}
-                    disabled={isSubmitting}
-                    className="w-full mt-6 bg-primary text-primary-foreground"
+                    disabled={isSubmitting || !isFormValid}
+                    className="w-full mt-6 bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? "Processing..." : "Place Order & Pay"}
                   </Button>
@@ -411,8 +457,8 @@ const Checkout = () => {
 
                   <Button
                     onClick={handlePlaceOrder}
-                    disabled={isSubmitting}
-                    className="w-full mt-6 bg-primary text-primary-foreground"
+                    disabled={isSubmitting || !isFormValid}
+                    className="w-full mt-6 bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? "Submitting..." : "Submit Pre-Order Request"}
                   </Button>
