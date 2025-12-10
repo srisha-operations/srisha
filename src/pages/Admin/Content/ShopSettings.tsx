@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "@/hooks/use-toast";
 
 const ShopSettings = () => {
+  const { toast } = useToast();
   const [mode, setMode] = useState<"normal" | "preorder">("normal");
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -51,17 +53,28 @@ const ShopSettings = () => {
 
       if (error) {
         console.error("Save error:", error);
-        alert("Failed to save settings");
+        toast({
+          title: "Error",
+          description: `Failed to save settings: ${error.message}`,
+          variant: "destructive",
+        });
         return;
       }
 
-      alert("Shop settings updated successfully!");
+      toast({
+        title: "Success",
+        description: `Shop mode changed to ${mode === "normal" ? "Normal Order" : "Pre-Order"}`,
+      });
       
       // Broadcast to all clients
       window.dispatchEvent(new CustomEvent("shopModeChanged", { detail: { mode } }));
     } catch (e) {
       console.error("Save error:", e);
-      alert("Failed to save settings");
+      toast({
+        title: "Error",
+        description: (e as any).message || "Failed to save settings",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -104,9 +117,16 @@ const ShopSettings = () => {
           </RadioGroup>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded p-4">
+        <div className={`border rounded p-4 ${mode === "normal" ? "bg-green-50 border-green-200" : "bg-blue-50 border-blue-200"}`}>
           <p className="font-lato text-sm">
-            <strong>Current Mode:</strong> <span className="font-tenor">{mode === "normal" ? "Normal Order" : "Pre-Order"}</span>
+            <strong>Current Mode:</strong> 
+            <span className={`font-tenor ml-2 inline-block px-3 py-1 rounded text-xs font-semibold ${
+              mode === "normal" 
+                ? "bg-green-100 text-green-800" 
+                : "bg-blue-100 text-blue-800"
+            }`}>
+              {mode === "normal" ? "✓ Order Mode Active" : "✓ Pre-Order Mode Active"}
+            </span>
           </p>
           <p className="font-lato text-xs text-muted-foreground mt-2">
             This setting affects how customers checkout. Changes take effect immediately across the site.
