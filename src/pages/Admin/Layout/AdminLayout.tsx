@@ -8,7 +8,8 @@ import {
   Settings, 
   MessageSquare, 
   LogOut,
-  Package
+  Package,
+  ShoppingCart
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -157,7 +158,7 @@ const AdminLayout = () => {
             </div>
 
             <NavLink
-              to="/admin/inquiries"
+              to="/admin/orders"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg font-lato text-sm transition-colors ${
                   isActive
@@ -166,8 +167,8 @@ const AdminLayout = () => {
                 }`
               }
             >
-              <MessageSquare className="w-4 h-4" />
-              Inquiries
+              <ShoppingCart className="w-4 h-4" />
+              Orders
             </NavLink>
           </div>
         </nav>

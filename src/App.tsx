@@ -16,6 +16,10 @@ import ProductCreate from "./pages/Admin/Products/ProductsCreate";
 import ProductEdit from "./pages/Admin/Products/ProductEdit";
 import ProductMedia from "./pages/Admin/Products/ProductsMedia";
 
+// Orders
+import OrdersList from "./pages/Admin/Orders/OrdersList";
+import OrderView from "./pages/Admin/Orders/OrderView";
+
 // Content
 import BrandSettings from "./pages/Admin/Content/BrandSettings";
 import HeroSettings from "./pages/Admin/Content/HeroSettings";
@@ -48,6 +52,10 @@ const App = () => (
         <Route path="products/new" element={<ProductCreate />} />
         <Route path="products/:id/edit" element={<ProductEdit />} />
         <Route path="products/:id/media" element={<ProductMedia />} />
+
+        {/* Orders */}
+        <Route path="orders" element={<OrdersList />} />
+        <Route path="orders/:id" element={<OrderView />} />
 
         {/* Content management */}
         <Route path="content/brand" element={<BrandSettings />} />
