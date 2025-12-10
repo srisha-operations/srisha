@@ -1,9 +1,13 @@
-import { useState } from "react";
+// src/components/ProductCard.tsx
+import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { Button } from "./ui/button";
 import { AspectRatio } from "./ui/aspect-ratio";
+import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
+import { addToCart } from "@/services/cart";
+import { getCurrentUser } from "@/services/auth";
+import { toast } from "@/hooks/use-toast";
 
-// WhatsApp icon component
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -19,45 +23,12 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-type ProductImage = {
-  id?: string;
-  url?: string;
-  is_hover?: boolean;
-  position?: number;
-};
-
-type ProductVariant = {
-  id?: string;
-  size?: string;
-  color?: string;
-  stock?: number;
-  visible?: boolean;
-};
-
-type Product = {
-  id: string;
-  product_id?: number;
-  name: string;
-  price: number; // integer in DB (rupees)
-  slug?: string;
-  description?: string;
-  visible?: boolean;
-  product_images?: ProductImage[];
-  product_variants?: ProductVariant[];
-};
-
-interface ProductCardProps {
-  product: Product;
-  isWishlisted: boolean;
-  onToggleWishlist: () => void;
-  onProductClick?: (product: Product) => void;
-}
+type Product = any;
 
 const placeholder = (w = 800, h = 1000, text = "No image") =>
   `https://placehold.co/${w}x${h}?text=${encodeURIComponent(text)}`;
 
 const formatPrice = (p: number) => {
-  // p is integer (rupees). Format e.g. 12999 -> ₹12,999
   try {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -69,63 +40,135 @@ const formatPrice = (p: number) => {
   }
 };
 
+interface Props {
+  product: Product;
+  onProductClick?: (p: Product) => void;
+  isWishlisted?: boolean;
+  onToggleWishlist?: (e?: any) => void;
+  // optional override for primary action in listing
+  primaryActionLabel?: string;
+  primaryActionHandler?: (e?: any) => void;
+  showWhatsApp?: boolean;
+}
+
 const ProductCard = ({
   product,
-  isWishlisted,
-  onToggleWishlist,
   onProductClick,
-}: ProductCardProps) => {
-  if (!product) return null;
-
+  isWishlisted: isWishlistedProp,
+  onToggleWishlist: onToggleWishlistProp,
+  primaryActionLabel,
+  primaryActionHandler,
+  showWhatsApp = true,
+}: Props) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [cartAdded, setCartAdded] = useState(false);
 
-  // Determine default & hover images from product_images
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      if (typeof isWishlistedProp !== "undefined") {
+        if (mounted) setIsWishlisted(isWishlistedProp as boolean);
+        return;
+      }
+
+      const user = await getCurrentUser();
+      const ids = await listWishlist(user?.id ?? null);
+      if (mounted) setIsWishlisted(ids.includes(product.id));
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [product.id, isWishlistedProp]);
+
+  useEffect(() => {
+    const onUpdated = async () => {
+      const user = await getCurrentUser();
+      const ids = await listWishlist(user?.id ?? null);
+      setIsWishlisted(ids.includes(product.id));
+    };
+
+    window.addEventListener("wishlistUpdated", onUpdated);
+    return () => window.removeEventListener("wishlistUpdated", onUpdated);
+  }, [product.id]);
+
   const images = product?.product_images || [];
-  // sort by position so primary order is maintained
   const sorted = [...images].sort(
-    (a, b) => (a?.position ?? 0) - (b?.position ?? 0)
+    (a: any, b: any) => (a?.position ?? 0) - (b?.position ?? 0)
   );
   const thumbDefault =
-    sorted.find((i) => !i?.is_hover)?.url ??
+    sorted.find((i: any) => !i?.is_hover)?.url ??
     sorted[0]?.url ??
     placeholder(800, 1000, "Product");
   const thumbHover =
-    sorted.find((i) => i?.is_hover)?.url ?? sorted[1]?.url ?? thumbDefault;
+    sorted.find((i: any) => i?.is_hover)?.url ?? sorted[1]?.url ?? thumbDefault;
 
-  const handleProductClick = (e: React.MouseEvent) => {
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onProductClick) {
-      onProductClick(product);
+    if (onToggleWishlistProp) {
+      await onToggleWishlistProp();
+      return;
+    }
+
+    const user = await getCurrentUser();
+    const uid = user?.id ?? null;
+
+    // Optimistic UI
+    const prev = isWishlisted;
+    setIsWishlisted(!prev);
+
+    try {
+      if (prev) {
+        await removeFromWishlist(uid, product.id);
+      } else {
+        await addToWishlist(uid, product.id);
+      }
+      // Event emitted by service on success
+    } catch (err) {
+      // Revert optimistic update
+      setIsWishlisted(prev);
+      console.error("wishlist toggle failed", err);
+      toast({ title: "Could not update wishlist", description: "Please try again." });
     }
   };
 
-  const handleInquire = () => {
-    // Add to inquiries localStorage
-    const INQUIRIES_KEY = "srisha_inquiries";
-    const stored = localStorage.getItem(INQUIRIES_KEY);
-    let inquiries: string[] = [];
+  const handleInquire = async () => {
+    // add to cart as inquiry placeholder for now (local behavior)
+    const user = await getCurrentUser();
+    
+    // Trigger animation
+    setIsAddingToCart(true);
+    setCartAdded(true);
 
-    if (stored) {
-      try {
-        inquiries = JSON.parse(stored);
-      } catch {
-        inquiries = [];
-      }
+    await addToCart({ product_id: product.id }, user?.id);
+    if (!user) {
+      window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }));
     }
-
-    if (!inquiries.includes(product.id)) {
-      inquiries.push(product.id);
-      localStorage.setItem(INQUIRIES_KEY, JSON.stringify(inquiries));
+    // optionally open WhatsApp only when enabled
+    if (showWhatsApp) {
+      const msg = encodeURIComponent(`I would like to inquire about ${product.name}`);
+      window.open(`https://wa.me/PHONE_NUMBER?text=${msg}`, "_blank");
     }
+    window.dispatchEvent(new Event("cartUpdated"));
 
-    // Open WhatsApp (replace PHONE_NUMBER)
-    const message = encodeURIComponent(
-      `I would like to inquire about ${product.name}`
-    );
-    window.open(`https://wa.me/PHONE_NUMBER?text=${message}`, "_blank");
+    // End animation after 500ms
+    setTimeout(() => {
+      setIsAddingToCart(false);
+      setCartAdded(false);
+    }, 500);
+  };
 
-    // Dispatch event to open cart drawer
-    window.dispatchEvent(new CustomEvent("openCartDrawer"));
+  // If guest added to cart, prompt sign-in modal but still add to cart (handled by service)
+  useEffect(() => {
+    // no-op placeholder to keep consistent behavior across components
+  }, []);
+
+  const handleView = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onProductClick?.(product);
   };
 
   return (
@@ -134,64 +177,43 @@ const ProductCard = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Image Container */}
       <div
         className="relative overflow-hidden bg-muted mb-4 cursor-pointer"
-        onClick={handleProductClick}
+        onClick={handleView}
       >
         <AspectRatio ratio={4 / 5}>
           <img
             src={isHovered ? thumbHover : thumbDefault}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover object-center transition-all duration-200"
-            style={{
-              transitionProperty: "opacity, transform",
-              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-            }}
           />
-
-          {/* Wishlist Heart */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleWishlist();
-            }}
-            className={`absolute top-3 right-3 z-20 w-10 h-10 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200 ${
+            onClick={handleToggleWishlist}
+            className={`absolute top-3 right-3 z-20 w-10 h-10 flex items-center justify-center bg-background/80 backdrop-blur-sm ${
               isHovered ? "hover:scale-110" : ""
             }`}
             aria-label="Add to wishlist"
-            style={{
-              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-            }}
           >
             <Heart
-              className={`w-5 h-5 transition-all duration-200 ${
+              className={`w-5 h-5 ${
                 isWishlisted ? "fill-accent text-accent" : "text-foreground"
-              } ${isHovered ? "scale-110" : ""}`}
-              style={{
-                transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-              }}
+              }`}
             />
           </button>
 
-          {/* View Details Overlay (Desktop Hover) */}
           <div
             className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-6 transition-all duration-200 ${
               isHovered
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 translate-y-4"
             }`}
-            style={{
-              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-            }}
           >
             <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleProductClick(e);
-              }}
+              onClick={handleView}
               variant="outline"
-              className="w-full bg-background/10 border-background/40 text-background hover:bg-background hover:text-foreground backdrop-blur-sm transition-all duration-150"
+              className="w-full bg-background/10 border-background/40 text-background hover:bg-background hover:text-foreground"
             >
               View Details
             </Button>
@@ -199,7 +221,6 @@ const ProductCard = ({
         </AspectRatio>
       </div>
 
-      {/* Product Info */}
       <div className="space-y-3">
         <div>
           <h3 className="font-tenor text-lg md:text-xl text-foreground">
@@ -210,17 +231,30 @@ const ProductCard = ({
           </p>
         </div>
 
-        {/* Inquire Button */}
         <Button
-          onClick={handleInquire}
+          onClick={primaryActionHandler ? async () => {
+            setIsAddingToCart(true);
+            setCartAdded(true);
+            await primaryActionHandler?.();
+            setTimeout(() => {
+              setIsAddingToCart(false);
+              setCartAdded(false);
+            }, 500);
+          } : handleInquire}
           variant="outline"
-          className="w-full gap-2 hover:bg-secondary transition-all duration-150"
-          style={{
-            transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
+          className={`w-full gap-2 hover:bg-secondary transition-all duration-220 ${
+            isAddingToCart ? "scale-108" : "scale-100"
+          } ${cartAdded ? "bg-green-50" : ""}`}
+          aria-live="polite"
         >
-          <WhatsAppIcon className="w-4 h-4" />
-          Inquire
+          {cartAdded ? (
+            <>
+              <span className="text-green-600">✓</span>
+              Added
+            </>
+          ) : (
+            primaryActionLabel ? primaryActionLabel : (showWhatsApp ? <><WhatsAppIcon className="w-4 h-4" /> Inquire</> : "ADD TO CART")
+          )}
         </Button>
       </div>
     </div>

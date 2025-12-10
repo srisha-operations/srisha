@@ -1,19 +1,13 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  Search,
-  Heart,
-  ShoppingBag,
-  User,
-  Menu,
-  ChevronDown,
-} from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Search, Heart, ShoppingBag, User, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
 import contentData from "@/data/content.json";
 import MobileNav from "./MobileNav";
 import SearchBar from "./SearchBar";
 import WishlistDrawer from "./WishlistDrawer";
 import CartDrawer from "./CartDrawer";
 import AuthModal from "./AuthModal";
+import ProductDetailModal from "./ProductDetailModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,131 +16,208 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { supabase } from "@/lib/supabaseClient";
-
-// localStorage key: srisha_user
-const USER_KEY = "srisha_user";
+import { getCurrentUser, signOut } from "@/services/auth";
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authView, setAuthView] = useState<"signin" | "signup">("signin");
-  const [user, setUser] = useState<{ name: string; email: string } | null>(
-    null
-  );
+
   const [content, setContent] = useState(contentData);
   const [brand, setBrand] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   const isProductsPage = location.pathname === "/products";
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+    const handleOpenProductModal = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setSelectedProduct(customEvent.detail);
+      setIsProductModalOpen(true);
     };
+
+    window.addEventListener("openProductModal", handleOpenProductModal);
+    return () => window.removeEventListener("openProductModal", handleOpenProductModal);
+  }, []);
+
+  useEffect(() => {
+    getCurrentUser().then((u) => {
+      setUser(u);
+    });
+  }, []);
+
+  // Listen for Supabase auth state changes
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        const u = session?.user || null;
+        setUser(u);
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadWishlistCount = async () => {
+      try {
+        const { listWishlist } = await import("@/services/wishlist");
+        const uid = user?.id;
+        const w = await listWishlist(uid);
+        if (mounted) {
+          setWishlistCount(Array.isArray(w) ? w.length : 0);
+        }
+      } catch (err) {
+        console.error("Failed to load wishlist count:", err);
+        if (mounted) setWishlistCount(0);
+      }
+    };
+
+    const update = () => {
+      loadWishlistCount();
+    };
+
+    loadWishlistCount(); // Initial load
+    window.addEventListener("wishlistUpdated", update);
+    return () => {
+      mounted = false;
+      window.removeEventListener("wishlistUpdated", update);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    const update = async () => {
+      // load cart count for user or local
+      try {
+        const { listCart } = await import("@/services/cart");
+        const uid = user?.id;
+        const items = await listCart(uid);
+        setCartCount(items ? items.length : 0);
+      } catch (e) {
+        console.error("Failed to load cart count:", e);
+      }
+    };
+
+    update();
+
+    const onCart = () => update();
+    window.addEventListener("cartUpdated", onCart);
+    return () => window.removeEventListener("cartUpdated", onCart);
+  }, [user]);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
     const loadBrand = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("site_content")
         .select("value")
         .eq("key", "brand")
         .single();
 
-      if (!error && data?.value) {
-        setBrand(data.value);
-      }
+      if (data?.value) setBrand(data.value);
     };
 
     loadBrand();
   }, []);
 
-  // Load stored user + local content
-  useEffect(() => {
-    // Load user
-    const stored = localStorage.getItem(USER_KEY);
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        setUser(null);
-      }
+  // Sign Out using Supabase
+  const handleSignOut = async () => {
+    await signOut();
+    // clear UI state and local storage on logout
+    setUser(null);
+    setWishlistCount(0);
+    setCartCount(0);
+  };
+
+  // Called after a successful auth (sign in / sign up) to merge local data
+  const handleAuthSuccess = async () => {
+    const u = await getCurrentUser();
+    if (!u) return;
+    setUser(u);
+
+    try {
+      // merge local cart -> remote
+      const { mergeLocalCartToRemote } = await import("@/services/cart");
+      await mergeLocalCartToRemote(u.id);
+    } catch (e) {
+      console.error("mergeLocalCartToRemote failed:", e);
     }
 
-    // Load custom content (if still needed)
-    const adminContent = localStorage.getItem("admin_content");
-    if (adminContent) {
-      try {
-        setContent(JSON.parse(adminContent));
-      } catch {
-        setContent(contentData);
+    try {
+      // merge local wishlist -> remote
+      const local = localStorage.getItem("srisha_wishlist");
+      if (local) {
+        const ids: string[] = JSON.parse(local);
+        if (ids && ids.length) {
+          const { addWishlistItem } = await import("@/services/wishlist");
+          for (const pid of ids) {
+            try {
+              await addWishlistItem(u.id, pid);
+            } catch (err) {
+              // ignore individual errors
+            }
+          }
+        }
+        localStorage.removeItem("srisha_wishlist");
       }
+    } catch (e) {
+      console.error("merge wishlist failed:", e);
     }
 
-    // Drawer + Auth modal events
-    const handleOpenCart = () => setIsCartOpen(true);
-    const handleOpenAuth = () => {
-      setAuthView("signin");
-      setIsAuthModalOpen(true);
-    };
-
-    window.addEventListener("openCartDrawer", handleOpenCart);
-    window.addEventListener("openAuthModal", handleOpenAuth);
-
-    return () => {
-      window.removeEventListener("openCartDrawer", handleOpenCart);
-      window.removeEventListener("openAuthModal", handleOpenAuth);
-    };
-  }, []);
+    // fire updates and reload counts
+    window.dispatchEvent(new Event("cartUpdated"));
+    window.dispatchEvent(new Event("wishlistUpdated"));
+  };
 
   const handleLogoClick = () => {
     if (location.pathname !== "/") {
       navigate("/");
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }, 100);
+      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
     } else {
-      const hero = document.getElementById("hero");
-      hero?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("hero")?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
-  const handleShopClick = () => {
-    navigate("/products");
-  };
+  const handleShopClick = () => navigate("/products");
 
   const scrollToSection = (id: string) => {
     if (location.pathname !== "/") {
       navigate("/");
       setTimeout(() => {
-        const element = document.getElementById(id);
-        element?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     } else {
-      const element = document.getElementById(id);
-      element?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
-  const handleSignOut = () => {
-    localStorage.removeItem(USER_KEY);
-    setUser(null);
-  };
-
-  const handleAuthSuccess = (userData: { name: string; email: string }) => {
-    setUser(userData);
-  };
+  // Compute initials
+  const initials = user?.user_metadata?.name
+    ? user.user_metadata.name.substring(0, 2).toUpperCase()
+    : user?.email?.substring(0, 2).toUpperCase();
 
   const showBackground =
     isScrolled || isHovered || isSearchOpen || isProductsPage;
+
   const textColor = showBackground ? "text-[#2C2C2C]" : "text-white/90";
   const iconColor = showBackground ? "#2C2C2C" : "#FFFFFF";
 
@@ -159,122 +230,134 @@ const Header = () => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Desktop Navigation - Hidden on Mobile */}
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex gap-8 items-center">
           <button
             onClick={handleShopClick}
-            className={`font-lato text-sm ${textColor} hover:opacity-60 transition-all duration-500`}
+            className={`font-lato text-sm ${textColor} hover:opacity-60`}
           >
             Shop
           </button>
           <button
             onClick={() => scrollToSection("footer-contact")}
-            className={`font-lato text-sm ${textColor} hover:opacity-60 transition-all duration-500`}
+            className={`font-lato text-sm ${textColor} hover:opacity-60`}
           >
             Contact
           </button>
         </nav>
 
-        {/* Mobile Left - Hamburger Menu */}
+        {/* Mobile Menu */}
         <button
-          className="md:hidden hover:opacity-60 transition-opacity"
+          className="md:hidden hover:opacity-60"
           onClick={() => setIsMobileNavOpen(true)}
-          aria-label="Menu"
+          aria-label="Open menu"
         >
           <Menu
-            className="w-5 h-5 transition-all duration-500"
             strokeWidth={1.5}
+            className="w-5 h-5"
             style={{ color: iconColor }}
+            aria-label="Open menu"
           />
         </button>
 
-        {/* Center Zone - Logo + Brand Name */}
+        {/* Brand Logo */}
         <button
           onClick={handleLogoClick}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 hover:opacity-80 transition-opacity"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 hover:opacity-80"
+          aria-label="Home"
         >
           {brand?.logo && (
             <img
               src={brand.logo}
-              alt={brand.name || "SRISHA"}
-              className="h-10 w-auto object-contain"
+              alt={brand?.name || "SRISHA"}
+              loading="lazy"
+              decoding="async"
+              className="h-15 w-auto object-contain"
             />
           )}
-
-          <span
-            className={`font-tenor text-xl ${textColor} tracking-wider transition-all duration-500`}
-          >
-            {brand?.name || "SRISHA"}
-          </span>
         </button>
 
-        {/* Desktop Right Zone - All Icons */}
+        {/* Right Icons */}
         <div className="hidden md:flex gap-6 items-center">
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="hover:opacity-60 transition-opacity"
-            aria-label="Search"
+            className="hover:opacity-60"
+            aria-label="Open search"
           >
             <Search
-              className="w-5 h-5 transition-all duration-500"
               strokeWidth={1.5}
+              className="w-5 h-5"
               style={{ color: iconColor }}
             />
           </button>
+
           <button
             onClick={() => setIsWishlistOpen(true)}
-            className="hover:opacity-60 transition-opacity"
-            aria-label="Wishlist"
+            className="hover:opacity-60"
+            aria-label="Open wishlist"
           >
-            <Heart
-              className="w-5 h-5 transition-all duration-500"
-              strokeWidth={1.5}
-              style={{ color: iconColor }}
-            />
+            <div className="relative">
+              <Heart
+                strokeWidth={1.5}
+                className="w-5 h-5"
+                style={{ color: iconColor }}
+              />
+
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] rounded-full px-1.5 py-[1px] font-medium">
+                  {wishlistCount}
+                </span>
+              )}
+            </div>
           </button>
+
           <button
             onClick={() => setIsCartOpen(true)}
-            className="hover:opacity-60 transition-opacity"
-            aria-label="Shopping Bag"
+            className="hover:opacity-60"
+            aria-label="Open cart"
           >
-            <ShoppingBag
-              className="w-5 h-5 transition-all duration-500"
-              strokeWidth={1.5}
-              style={{ color: iconColor }}
-            />
+            <div className="relative">
+              <ShoppingBag
+                strokeWidth={1.5}
+                className="w-5 h-5"
+                style={{ color: iconColor }}
+              />
+
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] rounded-full px-1.5 py-[1px] font-medium">
+                  {cartCount}
+                </span>
+              )}
+            </div>
           </button>
 
           {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
-                className="hover:opacity-60 transition-opacity flex items-center gap-1"
-                aria-label="Profile"
-              >
+              <button className="hover:opacity-60 flex items-center" aria-label="Open profile menu">
                 {user ? (
                   <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-tenor transition-all duration-500"
-                    style={{
-                      backgroundColor: showBackground ? "#2C2C2C" : "#FFFFFF",
-                      color: showBackground ? "#FFFFFF" : "#2C2C2C",
-                    }}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-tenor ${
+                      showBackground ? "bg-[#2C2C2C] text-white" : "bg-white text-[#2C2C2C]"
+                    }`}
                   >
-                    {user.name.substring(0, 2).toUpperCase()}
+                    {initials}
                   </div>
                 ) : (
                   <User
-                    className="w-5 h-5 transition-all duration-500"
                     strokeWidth={1.5}
+                    className="w-5 h-5"
                     style={{ color: iconColor }}
                   />
                 )}
               </button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end" className="w-48">
               {user ? (
                 <>
                   <DropdownMenuItem disabled className="font-lato text-xs">
-                    Signed in as {user.name}
+                    Signed in as {user.email}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -310,20 +393,21 @@ const Header = () => {
           </DropdownMenu>
         </div>
 
-        {/* Mobile Right - Search Icon Only */}
+        {/* Mobile Search */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="md:hidden hover:opacity-60 transition-opacity"
-          aria-label="Search"
+          className="md:hidden hover:opacity-60"
+          aria-label="Open search"
         >
           <Search
-            className="w-5 h-5 transition-all duration-500"
             strokeWidth={1.5}
+            className="w-5 h-5"
             style={{ color: iconColor }}
           />
         </button>
       </header>
 
+      {/* Drawers & Modals */}
       <MobileNav
         open={isMobileNavOpen}
         onOpenChange={setIsMobileNavOpen}
@@ -343,6 +427,7 @@ const Header = () => {
       <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <WishlistDrawer open={isWishlistOpen} onOpenChange={setIsWishlistOpen} />
       <CartDrawer open={isCartOpen} onOpenChange={setIsCartOpen} />
+
       <AuthModal
         open={isAuthModalOpen}
         onOpenChange={setIsAuthModalOpen}
@@ -350,12 +435,14 @@ const Header = () => {
         onAuthSuccess={handleAuthSuccess}
       />
 
-      {/* Backdrop blur for drawers */}
+      <ProductDetailModal
+        product={selectedProduct}
+        open={isProductModalOpen}
+        onOpenChange={setIsProductModalOpen}
+      />
+
       {(isWishlistOpen || isCartOpen) && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-          style={{ pointerEvents: "none" }}
-        />
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 pointer-events-none" />
       )}
     </>
   );

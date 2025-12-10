@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { AspectRatio } from "./ui/aspect-ratio";
-import productsData from "@/data/products.json";
+import { supabase } from "@/lib/supabaseClient";
 
 interface SearchBarProps {
   isOpen: boolean;
@@ -10,8 +10,9 @@ interface SearchBarProps {
 
 const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<typeof productsData.products>([]);
+  const [results, setResults] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  // no navigation here; search should always open product modal
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -30,14 +31,40 @@ const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (query.trim()) {
-      const filtered = productsData.products.filter((product) =>
-        product.name.toLowerCase().includes(query.toLowerCase())
-      );
-      setResults(filtered);
-    } else {
-      setResults([]);
-    }
+    let mounted = true;
+    const run = async () => {
+      if (!query.trim()) {
+        setResults([]);
+        return;
+      }
+
+      const q = query.trim();
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select("id, name, slug, product_images(*)")
+          .ilike("name", `%${q}%`)
+          .limit(20);
+
+        if (error) {
+          console.error("search error", error);
+          setResults([]);
+          return;
+        }
+
+        if (!mounted) return;
+        setResults(data || []);
+      } catch (e) {
+        console.error(e);
+        setResults([]);
+      }
+    };
+
+    const t = setTimeout(run, 200);
+    return () => {
+      mounted = false;
+      clearTimeout(t);
+    };
   }, [query]);
 
   if (!isOpen) return null;
@@ -69,30 +96,34 @@ const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
         {results.length > 0 && (
           <div className="mt-6 max-h-96 overflow-y-auto">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {results.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent("openProductModal", { detail: product }));
-                    onClose();
-                  }}
-                  className="text-left hover:opacity-80 transition-opacity"
-                >
-                  <div className="bg-muted mb-2">
-                    <AspectRatio ratio={4 / 5}>
-                      <img
-                        src={product.thumbDefault}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </AspectRatio>
-                  </div>
-                  <h4 className="font-tenor text-sm text-foreground mb-1">
-                    {product.name}
-                  </h4>
-                  <p className="text-xs text-muted-foreground">{product.price}</p>
-                </button>
-              ))}
+              {results.map((product, idx) => {
+                const thumb = (product.product_images || [])[0]?.url || "";
+                return (
+                  <button
+                    key={`${product.id}-${idx}`}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("openProductModal", { detail: product }));
+                      onClose();
+                    }}
+                    className="text-left hover:opacity-80 transition-opacity"
+                  >
+                    <div className="bg-muted mb-2">
+                      <AspectRatio ratio={4 / 5}>
+                        <img
+                          src={thumb}
+                          alt={product.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
+                      </AspectRatio>
+                    </div>
+                    <h4 className="font-tenor text-sm text-foreground mb-1">
+                      {product.name}
+                    </h4>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

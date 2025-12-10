@@ -100,6 +100,19 @@ const AdminLayout = () => {
             Footer
           </NavLink>
 
+          <NavLink
+            to="/admin/content/shop"
+            className={({ isActive }) =>
+              `font-lato ml-2 ${
+                isActive
+                  ? "text-foreground font-semibold"
+                  : "text-muted-foreground"
+              }`
+            }
+          >
+            Shop Settings
+          </NavLink>
+
           {/* Inquiries */}
           <h3 className="mt-4 mb-2 font-tenor text-lg text-foreground">
             Inquiries

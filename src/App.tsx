@@ -2,7 +2,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
+import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
+import AuthCallback from "./pages/AuthCallback";
 
 // Admin pages
 import AdminSignin from "./pages/Admin/Login/AdminLogin";
@@ -19,6 +21,7 @@ import BrandSettings from "./pages/Admin/Content/BrandSettings";
 import HeroSettings from "./pages/Admin/Content/HeroSettings";
 import GallerySettings from "./pages/Admin/Content/GallerySettings";
 import FooterSettings from "./pages/Admin/Content/FooterSettings";
+import ShopSettings from "./pages/Admin/Content/ShopSettings";
 
 // Inquiries
 // import InquiriesList from "./pages/Admin/Inquiries/InquiriesList";
@@ -30,7 +33,9 @@ const App = () => (
       {/* public routes */}
       <Route path="/" element={<Index />} />
       <Route path="/products" element={<Products />} />
+      <Route path="/checkout" element={<Checkout />} />
       <Route path="/product/:slug" element={<ProductDetail />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
 
       {/* admin auth */}
       <Route path="/admin/signin" element={<AdminSignin />} />
@@ -49,6 +54,7 @@ const App = () => (
         <Route path="content/hero" element={<HeroSettings />} />
         <Route path="content/gallery" element={<GallerySettings />} />
         <Route path="content/footer" element={<FooterSettings />} />
+        <Route path="content/shop" element={<ShopSettings />} />
 
         {/* Inquiries */}
         {/* <Route path="inquiries" element={<InquiriesList />} />

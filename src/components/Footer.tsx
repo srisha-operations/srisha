@@ -1,6 +1,18 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { Instagram, Youtube, Facebook, MapPin, Mail } from "lucide-react";
+
+const socialIcons: Record<string, JSX.Element> = {
+  instagram: <Instagram className="w-4 h-4" />,
+  youtube: <Youtube className="w-4 h-4" />,
+  facebook: <Facebook className="w-4 h-4" />,
+};
+
+const otherIcons: Record<string, JSX.Element> = {
+  mappin: <MapPin className="w-4 h-4" />,
+  mail: <Mail className="w-4 h-4" />,
+};
 
 const Footer = () => {
   const [footer, setFooter] = useState<any>(null);
@@ -26,16 +38,16 @@ const Footer = () => {
   }, []);
 
   if (!footer) return null;
-  
+
   return (
     <footer
       id="footer-contact"
       className="w-full bg-background border-t border-border"
     >
       <div className="container mx-auto px-4 py-16 md:py-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-8 items-start">
           {/* Quick Links */}
-          <div>
+          <div className="h-full">
             <h3 className="font-tenor text-lg mb-6 text-foreground">
               Quick Links
             </h3>
@@ -54,19 +66,27 @@ const Footer = () => {
           </div>
 
           {/* Contact Us */}
-          <div>
+          <div className="h-full">
             <h3 className="font-tenor text-lg mb-6 text-foreground">
               Contact Us
             </h3>
             <div className="space-y-3 font-lato text-sm text-muted-foreground">
-              <p>{footer?.contact.address}</p>
-              <p>{footer?.contact.number}</p>
-              <p>{footer?.contact.email}</p>
+              <p className="flex items-center gap-2">
+                {otherIcons["mappin"]}
+                <span>{footer?.contact.address}</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span>{footer?.contact.number}</span>
+              </p>
+              <p className="flex items-center gap-2">
+                {otherIcons["mail"]}
+                <span>{footer?.contact.email}</span>
+              </p>
             </div>
           </div>
 
           {/* Socials */}
-          <div>
+          <div className="h-full">
             <h3 className="font-tenor text-lg mb-6 text-foreground">Socials</h3>
             <ul className="space-y-3">
               {footer?.socials.map((social) => (
@@ -75,8 +95,9 @@ const Footer = () => {
                     href={social.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-lato text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex items-center gap-2 font-lato text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
+                    {socialIcons[social.type] || null}
                     {social.label}
                   </a>
                 </li>
