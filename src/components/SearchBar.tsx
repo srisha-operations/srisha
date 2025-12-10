@@ -8,10 +8,15 @@ interface SearchBarProps {
   onClose: () => void;
 }
 
+// Module-level cache for search results
+const searchCache = new Map<string, { results: any[]; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   // no navigation here; search should always open product modal
 
   useEffect(() => {
@@ -32,13 +37,29 @@ const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
 
   useEffect(() => {
     let mounted = true;
-    const run = async () => {
+
+    const executeSearch = async () => {
       if (!query.trim()) {
         setResults([]);
         return;
       }
 
-      const q = query.trim();
+      const q = query.trim().toLowerCase();
+
+      // Check cache first
+      const cacheKey = q;
+      const cached = searchCache.get(cacheKey);
+      const now = Date.now();
+
+      if (cached && now - cached.timestamp < CACHE_TTL) {
+        // Cache hit - use cached results
+        if (mounted) {
+          setResults(cached.results);
+        }
+        return;
+      }
+
+      // Cache miss - fetch from API
       try {
         const { data, error } = await supabase
           .from("products")
@@ -48,22 +69,34 @@ const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
 
         if (error) {
           console.error("search error", error);
-          setResults([]);
+          if (mounted) setResults([]);
           return;
         }
 
         if (!mounted) return;
-        setResults(data || []);
+
+        // Store in cache
+        const results = data || [];
+        searchCache.set(cacheKey, { results, timestamp: now });
+        setResults(results);
       } catch (e) {
-        console.error(e);
-        setResults([]);
+        console.error("search exception:", e);
+        if (mounted) setResults([]);
       }
     };
 
-    const t = setTimeout(run, 200);
+    // Debounce the search (300ms)
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(executeSearch, 300);
+
     return () => {
       mounted = false;
-      clearTimeout(t);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
     };
   }, [query]);
 
