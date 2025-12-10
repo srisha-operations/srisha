@@ -8,6 +8,7 @@ import { Trash2 } from "lucide-react";
 import { listCart, removeFromCart, submitPreorder } from "@/services/cart";
 import { getCurrentUser } from "@/services/auth";
 import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ interface Props {
 const CartDrawer = ({ open, onOpenChange }: Props) => {
   const [items, setItems] = useState<any[]>([]);
   const [mode, setMode] = useState<"normal" | "inquiry">("normal");
+  const { toast } = useToast();
 
   const load = async () => {
     const user = await getCurrentUser();
@@ -82,8 +84,11 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
 
   const handleRemove = async (productId: string) => {
     const user = await getCurrentUser();
+    const productName = items.find(p => p.id === productId)?.name || "Item";
+    
     if (!user) {
       await removeFromCart(productId);
+      toast({ title: `${productName} removed from cart`, duration: 3000 });
       load();
       return;
     }
@@ -92,6 +97,7 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
     const ci = cart.find((c: any) => c.product_id === productId);
     if (ci) {
       await removeFromCart(ci.id, user.id);
+      toast({ title: `${productName} removed from cart`, duration: 3000 });
       load();
     }
   };
