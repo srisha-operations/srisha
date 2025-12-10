@@ -172,9 +172,9 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
               <div className="absolute inset-0 flex items-center justify-center">
                 <Button
                   className="bg-transparent border border-white/90 text-white/90 hover:bg-[#F3EEE6] hover:text-[#2C2C2C] hover:border-[#2C2C2C] font-tenor tracking-wider px-8 py-6 text-base transition-all duration-500 rounded-none"
-                  onClick={() => (window.location.href = "/")}
+                  onClick={() => setIsExpanded(false)}
                 >
-                  {gallery?.final_cta?.text || ""}
+                  Collapse
                 </Button>
               </div>
             </div>
