@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Search, Heart, ShoppingBag, User, Menu } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import contentData from "@/data/content.json";
 import MobileNav from "./MobileNav";
 import SearchBar from "./SearchBar";
@@ -17,6 +17,7 @@ import {
 } from "./ui/dropdown-menu";
 import { supabase } from "@/lib/supabaseClient";
 import { getCurrentUser, signOut } from "@/services/auth";
+import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const location = useLocation();
@@ -36,6 +37,8 @@ const Header = () => {
   const [content, setContent] = useState(contentData);
   const [brand, setBrand] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
+  const { toast } = useToast();
+  const prevLoggedInRef = useRef<boolean | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
@@ -65,19 +68,44 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    getCurrentUser().then((u) => {
-      setUser(u);
-    });
+    let mounted = true;
+    // track prior auth state in this tab to avoid toasting on reloads
+    (async () => {
+      try {
+        const u = await getCurrentUser();
+        if (!mounted) return;
+        setUser(u);
+        // record initial state (logged in or not)
+        prevLoggedInRef.current = !!u;
+      } catch (e) {
+        console.error("getCurrentUser error:", e);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Listen for Supabase auth state changes
   useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const u = session?.user || null;
-        setUser(u);
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const u = session?.user || null;
+      const prev = prevLoggedInRef.current;
+      setUser(u);
+
+      // Only show toast when transitioning from logged-out -> logged-in in this tab
+      try {
+        if (!prev && u) {
+          toast({ title: "Signed in successfully", duration: 3000 });
+        }
+      } catch (e) {
+        console.error("Toast error:", e);
       }
-    );
+
+      // update prior state marker
+      prevLoggedInRef.current = !!u;
+    });
 
     return () => listener.subscription.unsubscribe();
   }, []);
