@@ -53,6 +53,18 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
+    const handleOpenAuthModal = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const view = customEvent.detail || "signin";
+      setAuthView(view);
+      setIsAuthModalOpen(true);
+    };
+
+    window.addEventListener("openAuthModal", handleOpenAuthModal);
+    return () => window.removeEventListener("openAuthModal", handleOpenAuthModal);
+  }, []);
+
+  useEffect(() => {
     getCurrentUser().then((u) => {
       setUser(u);
     });
