@@ -8,6 +8,7 @@ import { addToCart } from "@/services/cart";
 import { getCurrentUser } from "@/services/auth";
 import { toast } from "@/hooks/use-toast";
 import { useLazyImage } from "@/hooks/use-lazy-image";
+import { formatPrice } from "@/lib/utils";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg
@@ -28,18 +29,6 @@ type Product = any;
 
 const placeholder = (w = 800, h = 1000, text = "No image") =>
   `https://placehold.co/${w}x${h}?text=${encodeURIComponent(text)}`;
-
-const formatPrice = (p: number) => {
-  try {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(p);
-  } catch {
-    return `₹${p}`;
-  }
-};
 
 interface Props {
   product: Product;
