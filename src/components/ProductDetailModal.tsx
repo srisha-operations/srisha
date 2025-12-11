@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Heart, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
 import { addToCart, submitPreorder } from "@/services/cart";
 import { getCurrentUser } from "@/services/auth";
@@ -141,17 +141,18 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
       // add the item if not already in cart, then submit preorder for that product
       await addToCart({ product_id: product.id, quantity: 1 }, user.id);
       await submitPreorder(user.id); // marks all cart items for user as 'inquired'
-      alert("Preorder submitted! The store will contact you.");
+      toast({ title: "Preorder submitted!", description: "The store will contact you soon." });
       window.dispatchEvent(new Event("cartUpdated"));
       onOpenChange(false);
       return;
     }
 
-    // mode === normal -> direct checkout flow (for now just add to cart and navigate to /checkout)
+    // mode === normal -> add to cart and open CartDrawer
     await addToCart({ product_id: product.id, quantity: 1 }, user.id);
     window.dispatchEvent(new Event("cartUpdated"));
-    // route to /checkout (you need a checkout page)
-    window.location.href = "/checkout";
+    // Open cart drawer
+    window.dispatchEvent(new Event("openCartDrawer"));
+    onOpenChange(false);
   };
 
   if (!product) return null;
@@ -238,7 +239,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
             <div className="p-6 lg:p-8">
               <h2 className="text-2xl font-tenor mb-2">{product.name}</h2>
-              <p className="text-xl mb-6">{product.price}</p>
+              <p className="text-xl mb-6">{formatPrice(product.price)}</p>
 
               <div className="mb-6">
                 <label className="text-sm text-muted-foreground block mb-3">
@@ -287,8 +288,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                   onClick={handlePreorderOrCheckout}
                   className="w-full bg-secondary"
                 >
-                  {" "}
-                  {/* label determined by mode inside */} PROCEED{" "}
+                  PROCEED TO CART
                 </Button>
               </div>
 
