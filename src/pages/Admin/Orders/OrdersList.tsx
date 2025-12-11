@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Trash2, Eye } from "lucide-react";
 import { listOrders, updateOrderStatus, deleteOrder, Order } from "@/services/orders";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/utils";
 
 const OrdersList = () => {
   const navigate = useNavigate();
@@ -152,12 +153,12 @@ const OrdersList = () => {
                     <TableCell className="font-lato">{order.customer_name}</TableCell>
                     <TableCell className="font-lato text-xs text-muted-foreground">{order.customer_email}</TableCell>
                     <TableCell className="font-lato">
-                      ₹{(order.total_amount || order.total || 0).toFixed(2)}
+                      {formatPrice(order.total_amount || order.total || 0)}
                     </TableCell>
                     <TableCell>
-                      <Select value={order.status} onValueChange={(val) => handleStatusChange(order.id, val)}>
-                        <SelectTrigger className={`w-40 text-xs font-lato ${statusColors[order.status]}`}>
-                          <SelectValue />
+                      <Select value={order.status || ""} onValueChange={(val) => handleStatusChange(order.id, val)}>
+                        <SelectTrigger className={`w-40 text-xs font-lato ${statusColors[order.status] || ""}`}>
+                          <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="pending_payment">Pending Payment</SelectItem>
