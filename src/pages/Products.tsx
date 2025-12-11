@@ -518,6 +518,7 @@ const Products = () => {
                       <input
                         id={`size-${s}`}
                         type="checkbox"
+                        title={`Filter by size ${s}`}
                         checked={selectedSizes.includes(s)}
                         onChange={(e) => {
                           if (e.target.checked) {
