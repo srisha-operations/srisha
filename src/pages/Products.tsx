@@ -20,20 +20,9 @@ import { supabase } from "@/lib/supabaseClient";
 import { getCurrentUser } from "@/services/auth";
 import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
 import { toast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/utils";
 
 type ViewMode = "grid" | "list";
-
-const formatPrice = (p: number) => {
-  try {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(p);
-  } catch {
-    return `₹${p}`;
-  }
-};
 
 const Products = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");

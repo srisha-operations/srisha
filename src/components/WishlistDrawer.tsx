@@ -9,6 +9,7 @@ import { listWishlist, removeFromWishlist } from "@/services/wishlist";
 import { addToCart } from "@/services/cart";
 import { getCurrentUser } from "@/services/auth";
 import { supabase } from "@/lib/supabaseClient";
+import { formatPrice } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -122,7 +123,7 @@ const WishlistDrawer = ({ open, onOpenChange }: Props) => {
                       {product.name}
                     </h4>
                     <p className="text-base text-muted-foreground">
-                      ₹{product.price}
+                      {formatPrice(product.price)}
                     </p>
                   </div>
 
