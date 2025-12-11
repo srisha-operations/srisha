@@ -96,9 +96,9 @@ const ProductCard = ({
   const thumbHover =
     sorted.find((i: any) => i?.is_hover)?.url ?? sorted[1]?.url ?? thumbDefault;
 
-  // Use lazy image hooks for both default and hover images
+  // Preload both images
   const defaultImg = useLazyImage({ src: thumbDefault, threshold: 0.1 });
-  const hoverImg = useLazyImage({ src: thumbHover, threshold: 0.1 });
+  const hoverImg = useLazyImage({ src: thumbHover, threshold: 0.01 }); // Eager load hover image
 
   const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -177,12 +177,10 @@ const ProductCard = ({
       >
         <AspectRatio ratio={4 / 5}>
           <img
-            ref={isHovered ? hoverImg.imgRef : defaultImg.imgRef}
-            src={isHovered ? hoverImg.imageSrc : defaultImg.imageSrc}
+            src={isHovered && thumbHover && thumbHover !== thumbDefault ? hoverImg.imageSrc : defaultImg.imageSrc}
             alt={product.name}
             loading="lazy"
             decoding="async"
-            onLoad={isHovered ? hoverImg.onLoad : defaultImg.onLoad}
             className="w-full h-full object-cover object-center transition-all duration-200"
           />
           <button
