@@ -13,12 +13,14 @@ import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { X } from "lucide-react";
 import { signIn, signUp } from "@/services/auth";
+import { toast } from "@/hooks/use-toast";
 
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultView?: "signin" | "signup";
   onAuthSuccess?: (user: any) => void;
+  onAfterAuthSuccess?: () => void;
 }
 
 const AuthModal = ({
@@ -26,8 +28,10 @@ const AuthModal = ({
   onOpenChange,
   defaultView = "signin",
   onAuthSuccess,
+  onAfterAuthSuccess,
 }: AuthModalProps) => {
   const [view, setView] = useState(defaultView);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -41,6 +45,7 @@ const AuthModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       let user;
@@ -51,7 +56,10 @@ const AuthModal = ({
           formData.phone,
           formData.password
         );
-        alert("Signup successful! Check your email to confirm your account.");
+        toast({
+          title: "Signup successful!",
+          description: "Check your email to confirm your account.",
+        });
       } else {
         user = await signIn(formData.email, formData.password);
 
@@ -59,12 +67,30 @@ const AuthModal = ({
           name: user.user_metadata?.name || user.email.split("@")[0],
           email: user.email,
         });
+
+        toast({
+          title: "Welcome back!",
+          description: `Signed in as ${user.email}`,
+        });
       }
 
-      onOpenChange(false);
       setFormData({ name: "", email: "", phone: "", password: "" });
+      onOpenChange(false);
+      
+      // Execute pending action callback (e.g., sync cart/wishlist)
+      if (onAfterAuthSuccess) {
+        setTimeout(() => {
+          onAfterAuthSuccess();
+        }, 100);
+      }
     } catch (err: any) {
-      alert(err.message);
+      toast({
+        title: "Error",
+        description: err.message || "Authentication failed",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -133,8 +159,8 @@ const AuthModal = ({
                 />
               </div>
 
-              <Button className="w-full py-6" type="submit">
-                {view === "signin" ? "Sign In" : "Sign Up"}
+              <Button className="w-full py-6" type="submit" disabled={isLoading}>
+                {isLoading ? "Loading..." : (view === "signin" ? "Sign In" : "Sign Up")}
               </Button>
             </form>
 
@@ -144,6 +170,7 @@ const AuthModal = ({
                 onClick={() =>
                   setView(view === "signin" ? "signup" : "signin")
                 }
+                disabled={isLoading}
               >
                 {view === "signin"
                   ? "New here? Sign Up"
