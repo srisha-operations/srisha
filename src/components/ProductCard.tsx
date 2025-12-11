@@ -7,7 +7,6 @@ import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wish
 import { addToCart } from "@/services/cart";
 import { getCurrentUser } from "@/services/auth";
 import { toast } from "@/hooks/use-toast";
-import { useLazyImage } from "@/hooks/use-lazy-image";
 import { formatPrice } from "@/lib/utils";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -96,10 +95,6 @@ const ProductCard = ({
   const thumbHover =
     sorted.find((i: any) => i?.is_hover)?.url ?? sorted[1]?.url ?? thumbDefault;
 
-  // Preload both images
-  const defaultImg = useLazyImage({ src: thumbDefault, threshold: 0.1 });
-  const hoverImg = useLazyImage({ src: thumbHover, threshold: 0.01 }); // Eager load hover image
-
   const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onToggleWishlistProp) {
@@ -177,9 +172,9 @@ const ProductCard = ({
       >
         <AspectRatio ratio={4 / 5}>
           <img
-            src={isHovered && thumbHover && thumbHover !== thumbDefault ? hoverImg.imageSrc : defaultImg.imageSrc}
+            src={isHovered && thumbHover !== thumbDefault ? thumbHover : thumbDefault}
             alt={product.name}
-            loading="lazy"
+            loading="eager"
             decoding="async"
             className="w-full h-full object-cover object-center transition-all duration-200"
           />
