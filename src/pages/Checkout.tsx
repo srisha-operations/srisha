@@ -9,20 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatPrice } from "@/lib/utils";
 
 const OWNER_UPI = import.meta.env.VITE_OWNER_UPI || "upi@example";
-
-const formatPrice = (p: number) => {
-  try {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(p);
-  } catch {
-    return `₹${p}`;
-  }
-};
 
 const validateCheckoutForm = (shipping: any) => {
   const errors: Record<string, string> = {};
