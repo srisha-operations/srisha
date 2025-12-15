@@ -5,11 +5,15 @@ import { supabase } from "@/lib/supabaseClient";
 import { getCurrentUser } from "@/services/auth";
 import { listCart } from "@/services/cart";
 import { createOrder, createPreorder, getShopMode } from "@/services/checkout";
+import { clearCart } from "@/services/cart";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const OWNER_UPI = import.meta.env.VITE_OWNER_UPI || "upi@example";
 
@@ -45,6 +49,7 @@ const Checkout = () => {
   const [user, setUser] = useState<any>(null);
   const [mode, setMode] = useState<"normal" | "preorder">("normal");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const [shipping, setShipping] = useState({
     name: "",
@@ -58,6 +63,7 @@ const Checkout = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isFormValid, setIsFormValid] = useState(false);
+  const { toast } = useToast();
 
   // Real-time validation
   useEffect(() => {
@@ -135,9 +141,9 @@ const Checkout = () => {
   );
 
   const handlePlaceOrder = async () => {
-    console.log('handlePlaceOrder called, items:', items.length, 'mode:', mode);
+    // Debug logs removed to reduce console noise during normal usage
     if (!items.length) {
-      alert("Your cart is empty.");
+      toast({ title: "Cart is empty", description: "Your cart is empty.", duration: 3000 });
       return;
     }
 
@@ -167,7 +173,7 @@ const Checkout = () => {
           user?.id
         );
 
-        alert(`Preorder submitted! Order #${result.orderNumber}\nAdmin will contact you shortly.`);
+        toast({ title: `Preorder submitted`, description: `Order #${result.orderNumber}. Admin will contact you shortly.`, duration: 4000 });
         // Clear cart
         window.dispatchEvent(new Event("cartUpdated"));
         window.location.href = "/";
@@ -187,7 +193,6 @@ const Checkout = () => {
           firstErrorElement.scrollIntoView({ behavior: "smooth", block: "center" });
           firstErrorElement.focus();
         }
-        const { toast } = await import("@/hooks/use-toast");
         toast({ title: "Validation Error", description: Object.values(newErrors)[0] });
         return;
       }
@@ -214,17 +219,46 @@ const Checkout = () => {
         user?.id
       );
 
-      alert(`Order created! Order #${result.orderNumber}\nProceed to payment.`);
+      toast({ title: `Order created!`, description: `Order #${result.orderNumber}. Proceed to payment.`, duration: 4000 });
 
-      // Open UPI link for manual payment
+      // Clear the cart so the UI shows no items and redirect to orders page before UPI handling.
+      try {
+        await clearCart(user?.id);
+      } catch (e) {
+        console.error("Failed to clear cart post-order", e);
+      }
+
+      // Redirect to the orders page
+      navigate('/orders');
+
+      // Open UPI link for manual payment. Guard for desktop browsers where UPI deep links won't work.
       const upiLink = `upi://pay?pa=${OWNER_UPI}&pn=SRISHA&am=${total}&tn=Order%20${result.orderNumber}`;
-      window.open(upiLink, "_blank");
 
-      // Clear cart
-      window.dispatchEvent(new Event("cartUpdated"));
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+
+      if (isMobile) {
+        // Try to open UPI link (this should open the UPI app on mobile)
+        window.open(upiLink, "_blank");
+      } else {
+        try {
+          await navigator.clipboard.writeText(upiLink);
+          toast({
+            title: "UPI link copied",
+            description: "Open this link on a UPI-compatible mobile app to complete the payment.",
+            duration: 6000,
+          });
+        } catch (err) {
+          toast({
+            title: "UPI payment",
+            description: "UPI links open on mobile devices. Please open the order page on your phone to complete the payment.",
+            duration: 6000,
+          });
+        }
+      }
     } catch (e) {
       console.error("Order creation failed:", e);
-      const { toast } = await import("@/hooks/use-toast");
       toast({ title: "Failed to create order", description: (e as any).message || "Please try again." });
     } finally {
       setIsSubmitting(false);
@@ -238,7 +272,12 @@ const Checkout = () => {
     <div className="w-full min-h-screen bg-background">
       <Header />
       <main className="pt-24 pb-20 px-8 lg:px-16 xl:px-24">
-        <h1 className="font-tenor text-4xl mb-12">Checkout</h1>
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" className="p-0" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="font-tenor text-4xl">Checkout</h1>
+        </div>
 
         {items.length === 0 ? (
           <div className="text-center py-20">

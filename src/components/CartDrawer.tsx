@@ -83,22 +83,34 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
   }, []);
 
   const handleRemove = async (productId: string) => {
+    // optimistic UI update
+    const prev = items;
+    setItems((cur) => cur.filter((p) => p.id !== productId));
+
     const user = await getCurrentUser();
-    const productName = items.find(p => p.id === productId)?.name || "Item";
-    
+
     if (!user) {
-      await removeFromCart(productId);
-      toast({ title: `${productName} removed from cart`, duration: 3000 });
-      load();
+      try {
+        await removeFromCart(productId);
+      } catch (err) {
+        console.error("remove cart local failed", err);
+        setItems(prev);
+      }
       return;
     }
-    // find the cart item id for logged in user and delete
-    const cart = await listCart(user.id);
-    const ci = cart.find((c: any) => c.product_id === productId);
-    if (ci) {
-      await removeFromCart(ci.id, user.id);
-      toast({ title: `${productName} removed from cart`, duration: 3000 });
-      load();
+
+    try {
+      // find the cart item id for logged in user and delete
+      const cart = await listCart(user.id);
+      const ci = cart.find((c: any) => c.product_id === productId);
+      if (ci) {
+        await removeFromCart(ci.id, user.id);
+      }
+      // reload to ensure accurate state
+      await load();
+    } catch (err) {
+      console.error("remove cart failed", err);
+      setItems(prev);
     }
   };
 
@@ -113,7 +125,7 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
 
     if (mode === "inquiry") {
       await submitPreorder(user.id);
-      alert("Preorder sent. The admin will contact you.");
+      toast({ title: "Preorder sent", description: "The admin will contact you.", duration: 4000 });
       load();
       return;
     }

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2, Eye } from "lucide-react";
 import { listOrders, updateOrderStatus, deleteOrder, Order } from "@/services/orders";
+import { humanizeStatus } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
 
@@ -13,7 +14,7 @@ const OrdersList = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -29,7 +30,7 @@ const OrdersList = () => {
     setLoading(true);
     const { orders: data, total } = await listOrders(
       {
-        status: statusFilter || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
         search: searchQuery || undefined,
       },
       pageSize,
@@ -112,8 +113,8 @@ const OrdersList = () => {
               <SelectTrigger className="font-lato">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All statuses</SelectItem>
+                <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="pending_payment">Pending Payment</SelectItem>
                 <SelectItem value="pending_approval">Pending Approval</SelectItem>
                 <SelectItem value="processing">Processing</SelectItem>
@@ -156,7 +157,7 @@ const OrdersList = () => {
                       {formatPrice(order.total_amount || order.total || 0)}
                     </TableCell>
                     <TableCell>
-                      <Select value={order.status || ""} onValueChange={(val) => handleStatusChange(order.id, val)}>
+                      <Select value={order.status ?? "pending_payment"} onValueChange={(val) => handleStatusChange(order.id, val)}>
                         <SelectTrigger className={`w-40 text-xs font-lato ${statusColors[order.status] || ""}`}>
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
@@ -169,6 +170,7 @@ const OrdersList = () => {
                           <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
+                      <span className="ml-2 text-xs text-muted-foreground">{humanizeStatus(order.status)}</span>
                     </TableCell>
                     <TableCell className="font-lato text-sm">{formatDate(order.created_at)}</TableCell>
                     <TableCell className="text-right space-x-2">

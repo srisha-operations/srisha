@@ -192,13 +192,15 @@ const ProductCard = ({
             />
           </button>
 
-          <div
-            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-6 transition-all duration-200 ${
-              isHovered
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-4"
-            }`}
-          >
+          {/* Mobile: always visible overlay */}
+          <div className="absolute inset-x-0 bottom-0 p-4 block md:hidden">
+            <Button onClick={handleView} variant="outline" className="w-full bg-background/10 border-background/40 text-background">
+              View Details
+            </Button>
+          </div>
+
+          {/* Desktop: hover overlay */}
+          <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-6 transition-all duration-200 hidden md:block ${isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
             <Button
               onClick={handleView}
               variant="outline"

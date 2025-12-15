@@ -1,5 +1,6 @@
 // src/services/cart.ts
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "@/hooks/use-toast";
 
 const LOCAL_KEY = "srisha_cart";
 
@@ -69,7 +70,16 @@ export const addToCart = async (payload: { product_id: string; variant_id?: stri
       arr.push({ product_id, variant_id, quantity, status: "cart" });
     }
     localStorage.setItem(LOCAL_KEY, JSON.stringify(arr));
+    // update in-memory cache if present
+    try {
+      const cache = (globalThis as any).__srisha_cart_cache;
+      if (cache) {
+        cache.data = arr;
+        cache.lastFetch = 0;
+      }
+    } catch (e) {}
     window.dispatchEvent(new Event("cartUpdated"));
+    try { toast({ title: "Added to cart", description: "Item added to your cart." }); } catch (e) {}
     return { success: true };
   }
 
@@ -90,7 +100,17 @@ export const addToCart = async (payload: { product_id: string; variant_id?: stri
     return { error };
   }
 
+  // reset remote cache so next listCart fetches fresh data
+  try {
+    const cache = (globalThis as any).__srisha_cart_cache;
+    if (cache) {
+      cache.data = null;
+      cache.lastFetch = 0;
+    }
+  } catch (e) {}
+
   window.dispatchEvent(new Event("cartUpdated"));
+  try { toast({ title: "Added to cart", description: "Item added to your cart." }); } catch (e) {}
   return { success: true };
 };
 
@@ -102,7 +122,9 @@ export const updateCartQuantity = async (id: string, quantity: number, userId?: 
     if (it) {
       it.quantity = quantity;
       localStorage.setItem(LOCAL_KEY, JSON.stringify(arr));
+      try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = arr; cache.lastFetch = 0; } } catch(e){}
       window.dispatchEvent(new Event("cartUpdated"));
+      try { toast({ title: "Cart updated", description: "Item quantity updated." }); } catch (e) {}
     }
     return { success: true };
   }
@@ -112,7 +134,9 @@ export const updateCartQuantity = async (id: string, quantity: number, userId?: 
     console.error("updateCartQuantity error", error);
     return { error };
   }
+  try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
   window.dispatchEvent(new Event("cartUpdated"));
+  try { toast({ title: "Cart updated", description: "Item quantity updated." }); } catch (e) {}
   return { success: true };
 };
 
@@ -122,7 +146,9 @@ export const removeFromCart = async (idOrProductId: string, userId?: string) => 
     const arr = s ? JSON.parse(s) as CartLine[] : [];
     const filtered = arr.filter((i) => i.product_id !== idOrProductId && (i as any).id !== idOrProductId);
     localStorage.setItem(LOCAL_KEY, JSON.stringify(filtered));
+    try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = filtered; cache.lastFetch = 0; } } catch(e){}
     window.dispatchEvent(new Event("cartUpdated"));
+    try { toast({ title: "Removed from cart", description: "Item removed from your cart." }); } catch (e) {}
     return { success: true };
   }
 
@@ -131,7 +157,9 @@ export const removeFromCart = async (idOrProductId: string, userId?: string) => 
     console.error("removeFromCart error", error);
     return { error };
   }
+  try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
   window.dispatchEvent(new Event("cartUpdated"));
+  try { toast({ title: "Removed from cart", description: "Item removed from your cart." }); } catch (e) {}
   return { success: true };
 };
 
@@ -155,7 +183,9 @@ export const submitPreorder = async (userId: string, itemIds?: string[]) => {
   }
 
   // optional: return updated rows by selecting
+  try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
   window.dispatchEvent(new Event("cartUpdated"));
+  try { toast({ title: "Preorder submitted", description: "The store will contact you soon." }); } catch (e) {}
   return { success: true };
 };
 
@@ -179,5 +209,32 @@ export const mergeLocalCartToRemote = async (userId: string) => {
   if (error) console.error("mergeLocalCartToRemote error", error);
 
   localStorage.removeItem(LOCAL_KEY);
+  try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
   window.dispatchEvent(new Event("cartUpdated"));
+  try { toast({ title: "Cart merged", description: "Local cart merged to your account." }); } catch (e) {}
+};
+
+export const clearCart = async (userId?: string | null) => {
+  try {
+    if (!userId) {
+      localStorage.removeItem(LOCAL_KEY);
+      try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
+      window.dispatchEvent(new Event("cartUpdated"));
+      try { toast({ title: "Cart cleared", description: "Your cart is now empty." }); } catch (e){}
+      return { success: true };
+    }
+
+    const { error } = await supabase.from("cart_items").delete().eq("user_id", userId);
+    if (error) {
+      console.error("clearCart error", error);
+      return { error };
+    }
+    try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
+    window.dispatchEvent(new Event("cartUpdated"));
+    try { toast({ title: "Cart cleared", description: "Your cart is now empty." }); } catch (e){}
+    return { success: true };
+  } catch (e) {
+    console.error("clearCart exception", e);
+    return { error: e };
+  }
 };

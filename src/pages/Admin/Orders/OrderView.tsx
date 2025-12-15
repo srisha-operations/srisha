@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
 import { getOrder, getOrderItems, Order, OrderItem, updateOrderStatus } from "@/services/orders";
+import { humanizeStatus } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -51,6 +52,8 @@ const OrderView = () => {
   };
 
   const handleStatusChange = async (newStatus: string) => {
+    const orderId = id;
+    if (!orderId) return;
     const result = await updateOrderStatus(orderId, newStatus as Order["status"]);
     if (result.success) {
       toast({ title: "Order status updated", duration: 2000 });
@@ -69,7 +72,7 @@ const OrderView = () => {
   if (!order) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" onClick={onBack} className="font-lato">
+        <Button variant="ghost" onClick={() => navigate('/admin/orders')} className="font-lato">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Orders
         </Button>
@@ -109,7 +112,8 @@ const OrderView = () => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase font-medium">Status</p>
-                <Select value={order.status} onValueChange={handleStatusChange}>
+                <div className="flex items-center gap-2">
+                  <Select value={order.status} onValueChange={handleStatusChange}>
                   <SelectTrigger className="w-full font-lato">
                     <SelectValue />
                   </SelectTrigger>
@@ -121,7 +125,9 @@ const OrderView = () => {
                     <SelectItem value="delivered">Delivered</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
-                </Select>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">{humanizeStatus(order.status)}</span>
+                </div>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase font-medium">Total Amount</p>
@@ -188,6 +194,7 @@ const OrderView = () => {
             <TableHeader>
               <TableRow className="bg-slate-50">
                 <TableHead className="font-tenor">Product</TableHead>
+                <TableHead className="font-tenor">Variant</TableHead>
                 <TableHead className="font-tenor">Quantity</TableHead>
                 <TableHead className="font-tenor">Unit Price</TableHead>
                 <TableHead className="font-tenor text-right">Total</TableHead>
@@ -198,14 +205,11 @@ const OrderView = () => {
                 const product = productMap[item.product_id];
                 return (
                   <TableRow key={item.id} className="border-b border-border">
-                    <TableCell className="font-lato">
-                      {product?.name || item.product_id}
-                    </TableCell>
+                    <TableCell className="font-lato">{product?.name || item.product_id}</TableCell>
+                    <TableCell className="font-lato">{item.metadata?.size || item.variant_id || '-'}</TableCell>
                     <TableCell className="font-lato">{item.quantity}</TableCell>
                     <TableCell className="font-lato">₹{item.unit_price.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-lato">
-                      ₹{(item.quantity * item.unit_price).toFixed(2)}
-                    </TableCell>
+                    <TableCell className="text-right font-lato">₹{(item.quantity * item.unit_price).toFixed(2)}</TableCell>
                   </TableRow>
                 );
               })}

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { uploadImage, getContent, updateContent } from "@/services/content";
+import { useToast } from "@/hooks/use-toast";
 import { Trash2, GripVertical } from "lucide-react";
 
 import { DndContext, closestCenter } from "@dnd-kit/core";
@@ -84,6 +85,7 @@ const HeroSettings = () => {
   useEffect(() => {
     load();
   }, []);
+  const { toast } = useToast();
 
   const load = async () => {
     const { data } = await getContent("hero");
@@ -100,7 +102,7 @@ const HeroSettings = () => {
     if (!file) return;
     const { url, error } = await uploadImage("hero", file);
     if (error) {
-      alert("Upload failed");
+      toast({ title: "Upload failed", description: "Failed to upload image.", duration: 4000 });
       return;
     }
     setImages((prev) => [...prev, url!]);
@@ -117,7 +119,7 @@ const HeroSettings = () => {
       cta,
       images,
     });
-    if (error) alert("Save failed");
+    if (error) toast({ title: "Save failed", description: "Could not save hero content.", duration: 4000 });
   };
 
   if (loading) return <div>Loading…</div>;

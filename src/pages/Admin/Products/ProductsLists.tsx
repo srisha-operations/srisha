@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardHeader,
@@ -14,6 +15,7 @@ import { Trash2, Edit, ImageIcon } from "lucide-react";
 
 const ProductsList = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -40,7 +42,7 @@ const ProductsList = () => {
     const { error } = await deleteProductById(id);
     setDeletingId(null);
     if (error) {
-      alert("Failed to delete product.");
+      toast({ title: "Failed to delete product", description: "Please try again.", duration: 4000 });
       console.error(error);
       return;
     }
@@ -51,7 +53,7 @@ const ProductsList = () => {
   const onToggleVisibility = async (id: string, current: boolean) => {
     const { error } = await toggleProductVisibility(id, !current);
     if (error) {
-      alert("Failed to update visibility.");
+      toast({ title: "Failed to update visibility", description: "Please try again.", duration: 4000 });
       console.error(error);
       return;
     }

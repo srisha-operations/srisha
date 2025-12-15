@@ -186,9 +186,9 @@ const ProductListingSection = () => {
             
           >
             <div className="flex gap-5 md:gap-8">
-              {products.map((product, index) => (
+              {products.map((product) => (
                 <div
-                  key={`${product.id}-${index}`}
+                  key={product.id}
                   className="w-[45vw] md:w-[22vw] flex-shrink-0"
                 >
                   <ProductCard

@@ -12,6 +12,10 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatPrice(price: number | string): string {
   const numPrice = typeof price === "string" ? parseFloat(price) : price;
+  if (typeof numPrice !== 'number' || !isFinite(numPrice)) {
+    // fallback gracefully when price is invalid or NaN
+    return `₹0`;
+  }
   
   try {
     return new Intl.NumberFormat("en-IN", {
@@ -24,4 +28,17 @@ export function formatPrice(price: number | string): string {
     // Fallback if Intl fails
     return `₹${numPrice.toLocaleString("en-IN")}`;
   }
+}
+
+/**
+ * Humanize a snake_case or kebab-case status to Title Case.
+ * Example: 'pending_payment' -> 'Pending Payment'
+ */
+export function humanizeStatus(status?: string | null): string {
+  if (!status) return "Unknown";
+  const replaced = status.replace(/[-_]+/g, " ");
+  return replaced
+    .split(" ")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(" ");
 }

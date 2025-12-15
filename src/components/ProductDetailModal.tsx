@@ -6,6 +6,7 @@ import { Heart, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
 import { addToCart, submitPreorder } from "@/services/cart";
+import { getProductById } from "@/services/products";
 import { getCurrentUser } from "@/services/auth";
 import { toast } from "@/hooks/use-toast";
 
@@ -17,6 +18,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
   const [shopMode, setShopMode] = useState<"normal" | "inquiry">("normal");
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [cartAdded, setCartAdded] = useState(false);
+  const [resolvedProduct, setResolvedProduct] = useState<any>(product);
 
   useEffect(() => {
     // load shop mode
@@ -49,6 +51,23 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
       setSelectedImage(imgs[0] || "");
       setCurrentImageIndex(0);
       setSelectedSize("");
+      // If variants aren't present, fetch full product by id
+      (async () => {
+        if (!product.product_variants || product.product_variants.length === 0) {
+          try {
+            const { data: fresh } = await getProductById(product.id);
+            if (fresh) {
+              setResolvedProduct({ ...product, ...fresh });
+            } else {
+              setResolvedProduct(product);
+            }
+          } catch (err) {
+            setResolvedProduct(product);
+          }
+        } else {
+          setResolvedProduct(product);
+        }
+      })();
     }
   }, [product, open]);
 
@@ -98,8 +117,28 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     setIsAddingToCart(true);
     setCartAdded(true);
 
+    // Determine variant id if variants exist and a size is selected
+    let variant_id: string | null = null;
+    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+    if (hasVariants) {
+      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+      if (!v) {
+        toast({ title: 'Please select an available size' });
+        setIsAddingToCart(false);
+        setCartAdded(false);
+        return;
+      }
+      if (v.stock === 0) {
+        toast({ title: 'Selected size out of stock' });
+        setIsAddingToCart(false);
+        setCartAdded(false);
+        return;
+      }
+      variant_id = v.id;
+    }
+
     // Always add to cart (local for guests). If guest, also prompt auth modal.
-    await addToCart({ product_id: product.id, variant_id: null, quantity: 1 }, user?.id);
+    await addToCart({ product_id: resolvedProduct.id, variant_id, quantity: 1 }, user?.id);
     window.dispatchEvent(new Event("cartUpdated"));
 
     if (!user) {
@@ -136,10 +175,28 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
     const mode = settings?.value?.mode || "normal";
 
+    // If variants exist, require a selectedSize and validate stock
+    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+    if (hasVariants) {
+      if (!selectedSize) {
+        toast({ title: 'Please select a size' });
+        return;
+      }
+      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+      if (!v) {
+        toast({ title: 'Selected size unavailable' });
+        return;
+      }
+      if (v.stock === 0) {
+        toast({ title: 'Selected size out of stock' });
+        return;
+      }
+    }
+
     if (mode === "inquiry") {
       // set cart_items status -> 'inquired' for this user's relevant items
       // add the item if not already in cart, then submit preorder for that product
-      await addToCart({ product_id: product.id, quantity: 1 }, user.id);
+      await addToCart({ product_id: resolvedProduct.id, variant_id: hasVariants ? resolvedProduct.product_variants.find((x: any) => x.size === selectedSize).id : null, quantity: 1 }, user.id);
       await submitPreorder(user.id); // marks all cart items for user as 'inquired'
       toast({ title: "Preorder submitted!", description: "The store will contact you soon." });
       window.dispatchEvent(new Event("cartUpdated"));
@@ -148,7 +205,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     }
 
     // mode === normal -> add to cart and open CartDrawer
-    await addToCart({ product_id: product.id, quantity: 1 }, user.id);
+    await addToCart({ product_id: resolvedProduct.id, variant_id: hasVariants ? resolvedProduct.product_variants.find((x: any) => x.size === selectedSize).id : null, quantity: 1 }, user.id);
     window.dispatchEvent(new Event("cartUpdated"));
     // Open cart drawer
     window.dispatchEvent(new Event("openCartDrawer"));
@@ -159,7 +216,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
   const sizes = Array.from(
     new Set(
-      (product.product_variants || []).map((v: any) => v.size).filter(Boolean)
+      (resolvedProduct?.product_variants || []).map((v: any) => v.size).filter(Boolean)
     )
   ) as string[];
 
@@ -218,7 +275,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                   <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
                     {product.product_images.map((img: any, idx: number) => (
                       <button
-                        key={idx}
+                        key={img.id || img.url || idx}
                         aria-label={`Thumbnail ${idx + 1}`}
                         onClick={() => {
                           setSelectedImage(img.url);
@@ -239,41 +296,75 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
             <div className="p-6 lg:p-8">
               <h2 className="text-2xl font-tenor mb-2">{product.name}</h2>
-              <p className="text-xl mb-6">{formatPrice(product.price)}</p>
+              <p className="text-xl mb-6">{formatPrice(Number(resolvedProduct?.price ?? resolvedProduct?.displayPrice ?? 0))}</p>
 
               <div className="mb-6">
                 <label className="text-sm text-muted-foreground block mb-3">
                   SELECT SIZE
                 </label>
                 <div className="flex gap-2 flex-wrap">
-                  {sizes.map((s) => (
+                  {sizes.map((s) => {
+                    const variantForSize = (resolvedProduct?.product_variants || []).find((v: any) => v.size === s);
+                    const disabled = !variantForSize || variantForSize.stock === 0 || variantForSize.visible === false;
+                    return (
                     <button
                       key={s}
-                      onClick={() => setSelectedSize(s)}
+                      onClick={() => { if (!disabled) setSelectedSize(s); }}
                       className={cn(
                         "px-4 py-2 border",
                         selectedSize === s
                           ? "bg-primary text-primary-foreground border-primary"
+                          : disabled
+                          ? "bg-background border-border opacity-50 cursor-not-allowed"
                           : "bg-background border-border"
                       )}
                     >
                       {s}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="flex gap-3 mb-8">
                 <Button
-                  variant="outline"
-                  onClick={handleWishlistToggle}
-                  className="flex-1"
-                >
-                  {" "}
-                  <Heart className="w-4 h-4 mr-2" /> WISHLIST{" "}
-                </Button>
+                    variant="outline"
+                    onClick={handleWishlistToggle}
+                    className="flex-1"
+                  >
+                    <Heart className={`w-4 h-4 mr-2 ${isWishlisted ? 'fill-accent text-accent' : 'text-foreground'}`} /> {isWishlisted ? 'WISHLISTED' : 'WISHLIST'}
+                  </Button>
                 <Button
-                  onClick={handleAddToCart}
+                  onClick={async () => {
+                    // If there are variants, require size selection
+                    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+                    if (hasVariants && !selectedSize) {
+                      toast({ title: 'Please select a size' });
+                      return;
+                    }
+                    // Find variant id if exists
+                    let variant_id: string | null = null;
+                    if (hasVariants) {
+                      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+                      if (!v) {
+                        toast({ title: 'Selected size unavailable' });
+                        return;
+                      }
+                      if (v.stock === 0) {
+                        toast({ title: 'Selected size out of stock' });
+                        return;
+                      }
+                      variant_id = v.id;
+                    }
+                    setIsAddingToCart(true);
+                    setCartAdded(true);
+                    const user = await getCurrentUser();
+                    await addToCart({ product_id: resolvedProduct.id, variant_id, quantity: 1 }, user?.id);
+                    window.dispatchEvent(new Event('cartUpdated'));
+                    if (!user) window.dispatchEvent(new CustomEvent('openAuthModal', { detail: 'signin' }));
+                    setTimeout(() => { setIsAddingToCart(false); setCartAdded(false); onOpenChange(false); }, 500);
+                  }}
+                  disabled={(resolvedProduct?.product_variants || []).length > 0 && !selectedSize}
                   className={`flex-1 bg-primary text-primary-foreground transition-all duration-220 ${
                     isAddingToCart ? "scale-108" : "scale-100"
                   } ${cartAdded ? "bg-green-600" : ""}`}

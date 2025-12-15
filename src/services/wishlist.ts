@@ -1,5 +1,6 @@
 // src/services/wishlist.ts
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "@/hooks/use-toast";
 
 /**
  * Wishlist service
@@ -78,7 +79,13 @@ export const addWishlistItem = async (
         arr.push(productId);
         localStorage.setItem("srisha_wishlist", JSON.stringify(arr));
         wishlistCache = arr;
+        // update UI and notify
         window.dispatchEvent(new Event("wishlistUpdated"));
+        try {
+          toast({ title: "Added to wishlist", description: "Item added to your wishlist." });
+        } catch (e) {
+          // ignore toast errors
+        }
       }
       return;
     } catch (err) {
@@ -98,6 +105,9 @@ export const addWishlistItem = async (
   lastWishlistFetch = 0;
   wishlistCache = wishlistCache.includes(productId) ? wishlistCache : [...wishlistCache, productId];
   window.dispatchEvent(new Event("wishlistUpdated"));
+  try {
+    toast({ title: "Added to wishlist", description: "Item added to your wishlist." });
+  } catch (e) {}
 };
 
 export const addToWishlist = addWishlistItem;
@@ -115,6 +125,9 @@ export const removeWishlistItem = async (
       localStorage.setItem("srisha_wishlist", JSON.stringify(filtered));
       wishlistCache = filtered;
       window.dispatchEvent(new Event("wishlistUpdated"));
+      try {
+        toast({ title: "Removed from wishlist", description: "Item removed from your wishlist." });
+      } catch (e) {}
       return;
     } catch (err) {
       console.error("removeWishlistItem local error", err);
@@ -130,7 +143,11 @@ export const removeWishlistItem = async (
 
   if (error) throw error;
   wishlistCache = wishlistCache.filter((id) => id !== productId);
+  lastWishlistFetch = 0;
   window.dispatchEvent(new Event("wishlistUpdated"));
+  try {
+    toast({ title: "Removed from wishlist", description: "Item removed from your wishlist." });
+  } catch (e) {}
 };
 
 export const removeFromWishlist = removeWishlistItem;

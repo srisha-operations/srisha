@@ -63,7 +63,7 @@ const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
       try {
         const { data, error } = await supabase
           .from("products")
-          .select("id, name, slug, product_images(*)")
+          .select("id, name, slug, product_images(*), price, product_variants(*)")
           .ilike("name", `%${q}%`)
           .limit(20);
 
@@ -76,7 +76,17 @@ const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
         if (!mounted) return;
 
         // Store in cache
-        const results = data || [];
+        // Normalize results to include displayPrice. Don't assume presence of price field.
+        const results = (data || []).map((p: any) => {
+          let displayPrice = p.price ?? null;
+          if (displayPrice == null && p.product_variants?.length) {
+            const pairs = p.product_variants.map((v: any) => v.price ?? 0);
+            displayPrice = Math.min(...pairs);
+          }
+          // Normalize price on search result to avoid NaN in modals that expect 'price'
+          const normalized = { ...p, price: displayPrice };
+          return normalized;
+        });
         searchCache.set(cacheKey, { results, timestamp: now });
         setResults(results);
       } catch (e) {
@@ -129,11 +139,11 @@ const SearchBar = ({ isOpen, onClose }: SearchBarProps) => {
         {results.length > 0 && (
           <div className="mt-6 max-h-96 overflow-y-auto">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {results.map((product, idx) => {
+                {results.map((product) => {
                 const thumb = (product.product_images || [])[0]?.url || "";
                 return (
                   <button
-                    key={`${product.id}-${idx}`}
+                       key={product.id}
                     onClick={() => {
                       window.dispatchEvent(new CustomEvent("openProductModal", { detail: product }));
                       onClose();

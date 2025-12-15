@@ -6,13 +6,17 @@ import ProductDetail from "./pages/ProductDetail";
 import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
+import OrdersPage from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
 
 // Admin pages
 import AdminSignin from "./pages/Admin/Login/AdminLogin";
 import AdminLayout from "./pages/Admin/Layout/AdminLayout";
+import RequireAdmin from "./pages/Admin/Login/RequireAdmin";
 
 // Products
 import ProductsList from "./pages/Admin/Products/ProductsLists";
+import AdminDashboard from "./pages/Admin/Dashboard";
 import ProductCreate from "./pages/Admin/Products/ProductsCreate";
 import ProductEdit from "./pages/Admin/Products/ProductEdit";
 import ProductMedia from "./pages/Admin/Products/ProductsMedia";
@@ -42,13 +46,16 @@ const App = () => (
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/product/:slug" element={<ProductDetail />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/:id" element={<OrderDetail />} />
 
         {/* admin auth */}
         <Route path="/admin/signin" element={<AdminSignin />} />
 
         {/* admin protected layout */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<ProductsList />} />
+        <Route path="/admin" element={<RequireAdmin />}>
+          <Route path="" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
           {/* Products */}
           <Route path="products" element={<ProductsList />} />
           <Route path="products/new" element={<ProductCreate />} />
@@ -69,6 +76,7 @@ const App = () => (
           {/* Inquiries */}
           {/* <Route path="inquiries" element={<InquiriesList />} />
         <Route path="inquiries/:id" element={<InquiryView />} /> */}
+          </Route>
         </Route>
 
         {/* fallback */}

@@ -8,6 +8,7 @@ import {
   updateVariant,
   deleteVariant,
 } from "@/services/products";
+import { useToast } from "@/hooks/use-toast";
 
 import {
   Card,
@@ -27,6 +28,7 @@ import { Plus, Trash2, Loader2 } from "lucide-react";
 const ProductEdit = () => {
   const { id: productId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +49,7 @@ const ProductEdit = () => {
     const { data, error } = await getProductById(productId!);
 
     if (error || !data) {
-      alert("Failed to load product.");
+      toast({ title: "Failed to load product", description: "Please try again.", duration: 4000 });
       return;
     }
 
@@ -125,11 +127,11 @@ const ProductEdit = () => {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      alert("Product name is required.");
+      toast({ title: "Product name is required", description: "Please add a product name.", duration: 4000 });
       return;
     }
     if (!price || Number(price) <= 0) {
-      alert("Price must be valid.");
+      toast({ title: "Price invalid", description: "Please enter a valid price.", duration: 4000 });
       return;
     }
 
@@ -144,7 +146,7 @@ const ProductEdit = () => {
     });
 
     if (updateError) {
-      alert("Failed to update product.");
+      toast({ title: "Failed to update product", description: "Please try again.", duration: 4000 });
       console.error(updateError);
       return;
     }

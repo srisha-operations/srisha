@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { useParams } from "react-router-dom";
 import {
   getProductImages,
@@ -90,6 +91,7 @@ const ProductMedia = () => {
   const { id: productId } = useParams();
   const [images, setImages] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadImages();
@@ -110,7 +112,7 @@ const ProductMedia = () => {
       await uploadProductImageFile(file, productId!);
 
     if (uploadError) {
-      alert("Upload failed.");
+      toast({ title: "Upload failed", description: "Failed to upload image.", duration: 4000 });
       setUploading(false);
       return;
     }
@@ -149,7 +151,7 @@ const ProductMedia = () => {
 
   const saveOrder = async () => {
     await saveImageOrder(productId!, images);
-    alert("Order saved.");
+    toast({ title: "Order saved", description: "Image order saved successfully.", duration: 3000 });
   };
 
   return (

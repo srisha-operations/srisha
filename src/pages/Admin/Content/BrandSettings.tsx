@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { uploadImage, getContent, updateContent } from "@/services/content";
+import { useToast } from "@/hooks/use-toast";
 
 const BrandSettings = () => {
   const [brandName, setBrandName] = useState("");
@@ -11,6 +12,7 @@ const BrandSettings = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { load(); }, []);
+  const { toast } = useToast();
 
   const load = async () => {
     const { data } = await getContent("brand");
@@ -25,7 +27,7 @@ const BrandSettings = () => {
     if (!file) return;
     const { url, error } = await uploadImage("brand", file);
     if (error) {
-      alert("Upload failed.");
+      toast({ title: "Upload failed", description: "Logo upload failed.", duration: 4000 });
       return;
     }
     setBrandLogo(url!);
@@ -36,7 +38,8 @@ const BrandSettings = () => {
       name: brandName,
       logo: brandLogo,
     });
-    if (error) alert("Save failed.");
+    if (error) toast({ title: "Save failed", description: "Could not save brand content.", duration: 4000 });
+    else toast({ title: "Saved", description: "Brand content saved successfully.", duration: 3000 });
   };
 
   if (loading) return <div>Loading...</div>;

@@ -34,7 +34,7 @@ const HeroSection = ({ hero }: { hero: any }) => {
       >
         <CarouselContent className="h-screen -ml-0">
           {hero?.images?.map((image, index) => (
-            <CarouselItem key={index} className="h-screen pl-0">
+            <CarouselItem key={image || index} className="h-screen pl-0">
               <div className="relative h-full w-full">
                 <img
                   src={image}

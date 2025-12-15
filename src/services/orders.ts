@@ -77,7 +77,7 @@ export const getOrder = async (orderId: string): Promise<Order | null> => {
   try {
     const { data, error } = await supabase
       .from("orders")
-      .select("*")
+      .select(`*, order_items(*, product:products(*, product_images(*)))`)
       .eq("id", orderId)
       .single();
 
@@ -134,11 +134,55 @@ export const updateOrderStatus = async (
       return { success: false, error: error.message };
     }
 
+    // Optional: create an order_events entry to notify other systems (this will fail silently if table not present)
+    try {
+      await supabase.from("order_events").insert({ order_id: orderId, status, created_at: new Date().toISOString() });
+    } catch (err) {
+      // ignore: some deployments may not have order_events table
+    }
+    // Create an app-level event record
+    await createOrderEvent(orderId, { type: "status_change", payload: { status } });
+    // optional: notify via supabase function 'send_order_notification' if available
+    try {
+      const { supabase: sb } = await import("@/lib/supabaseClient");
+      if (sb?.functions?.invoke) {
+        // best-effort call to an edge function
+        await sb.functions.invoke("send_order_notification", { body: { order_id: orderId, status } });
+      }
+    } catch (err) {
+      // ignore
+    }
+
     return { success: true };
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Unknown error";
     console.error("updateOrderStatus exception:", err);
     return { success: false, error: errMsg };
+  }
+};
+
+/**
+ * Helper to optionally create an order event. Doesn't crash if the table is missing.
+ */
+export const createOrderEvent = async (orderId: string, event: { type: string; payload?: any }) => {
+  try {
+    await supabase.from("order_events").insert({ order_id: orderId, type: event.type, payload: event.payload || {}, created_at: new Date().toISOString() });
+  } catch (err) {
+    // ignore if not present
+  }
+};
+
+/**
+ * Notify customer about an order status change via an edge function (best-effort).
+ */
+export const notifyCustomerOrderStatusChange = async (orderId: string, status: Order["status"]) => {
+  try {
+    const { supabase: sb } = await import("@/lib/supabaseClient");
+    if (sb?.functions?.invoke) {
+      await sb.functions.invoke("send_order_notification", { body: { order_id: orderId, status } });
+    }
+  } catch (err) {
+    // ignore, no function configured
   }
 };
 

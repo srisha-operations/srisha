@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 import { getContent, updateContent } from "@/services/content";
+import { useToast } from "@/hooks/use-toast";
 
 const FooterSettings = () => {
   const [footer, setFooter] = useState<any>({
@@ -35,9 +36,11 @@ const FooterSettings = () => {
     setLoading(false);
   };
 
+  const { toast } = useToast();
   const save = async () => {
     const { error } = await updateContent("footer", footer);
-    if (error) alert("Save failed");
+    if (error) toast({ title: "Save failed", description: "Could not save footer details.", duration: 4000 });
+    else toast({ title: "Saved", description: "Footer content saved.", duration: 3000 });
   };
 
   if (loading) return <div>Loading…</div>;

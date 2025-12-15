@@ -6,6 +6,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 // will use services to load counts similar to Header
 import { listWishlist } from "@/services/wishlist";
@@ -22,6 +23,7 @@ interface MobileNavProps {
   onSignOut: () => void;
   onShopClick: () => void;
   onContactClick: () => void;
+  onOrdersClick: () => void;
 }
 
 const MobileNav = ({
@@ -35,11 +37,16 @@ const MobileNav = ({
   onSignOut,
   onShopClick,
   onContactClick,
+  onOrdersClick,
 }: MobileNavProps) => {
+  const navigate = useNavigate();
   const handleNavAction = (action: string) => {
     onOpenChange(false);
     
     switch (action) {
+            case "orders":
+              onOrdersClick();
+              break;
       case "shop":
         onShopClick();
         break;
@@ -55,6 +62,9 @@ const MobileNav = ({
       case "profile":
         if (!user) {
           onAuthOpen("signin");
+        }
+        if (user) {
+          navigate('/orders');
         }
         break;
       case "signout":
@@ -178,6 +188,18 @@ const MobileNav = ({
                 <User className="w-5 h-5" strokeWidth={1.5} />
                 <span className="text-sm">Signed in as {user.email}</span>
               </div>
+              <button
+                onClick={() => handleNavAction('orders')}
+                className="flex items-center gap-3 font-tenor text-base tracking-wide text-foreground hover:text-accent transition-colors duration-300 text-left"
+              >
+                <span>My Orders</span>
+              </button>
+              <button
+                onClick={() => handleNavAction('profile')}
+                className="flex items-center gap-3 font-tenor text-base tracking-wide text-foreground hover:text-accent transition-colors duration-300 text-left"
+              >
+                <span>Profile</span>
+              </button>
               <button
                 onClick={() => handleNavAction("signout")}
                 className="flex items-center gap-3 font-tenor text-base tracking-wide text-foreground hover:text-accent transition-colors duration-300 text-left"

@@ -44,10 +44,10 @@ const Footer = () => {
       id="footer-contact"
       className="w-full bg-background border-t border-border"
     >
-      <div className="container mx-auto px-4 py-16 md:py-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-8 items-start">
+      <div className="container mx-auto px-4 py-16 md:py-20 max-w-7xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 items-stretch justify-center">
           {/* Quick Links */}
-          <div className="h-full">
+          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
             <h3 className="font-tenor text-lg mb-6 text-foreground">
               Quick Links
             </h3>
@@ -66,7 +66,7 @@ const Footer = () => {
           </div>
 
           {/* Contact Us */}
-          <div className="h-full">
+          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
             <h3 className="font-tenor text-lg mb-6 text-foreground">
               Contact Us
             </h3>
@@ -86,7 +86,7 @@ const Footer = () => {
           </div>
 
           {/* Socials */}
-          <div className="h-full">
+          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
             <h3 className="font-tenor text-lg mb-6 text-foreground">Socials</h3>
             <ul className="space-y-3">
               {footer?.socials.map((social) => (

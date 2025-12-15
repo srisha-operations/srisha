@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 import { 
@@ -13,9 +13,11 @@ import {
 } from "lucide-react";
 
 const AdminLayout = () => {
+  const navigate = useNavigate();
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/admin/signin";
+    // Use router navigation rather than hard reload
+    navigate('/admin/signin', { replace: true });
   };
 
   return (

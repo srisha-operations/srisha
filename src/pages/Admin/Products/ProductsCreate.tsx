@@ -14,12 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
   import {
-    createProductBasic,
-    createProductVariants,
-  } from "@/services/products";
+      createProductBasic,
+      createProductVariants,
+    } from "@/services/products";
+  import { useToast } from "@/hooks/use-toast";
 
 const ProductCreate = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Basic product fields
   const [name, setName] = useState("");
@@ -64,11 +66,11 @@ const ProductCreate = () => {
   const handleContinue = async () => {
     // Basic validation
     if (!name.trim()) {
-      alert("Product name is required.");
+      toast({ title: "Product name required", description: "Please add a product name.", duration: 4000 });
       return;
     }
     if (!price || Number(price) <= 0) {
-      alert("Price must be a positive number.");
+      toast({ title: "Invalid price", description: "Price must be a positive number.", duration: 4000 });
       return;
     }
 
@@ -84,7 +86,7 @@ const ProductCreate = () => {
 
     if (productError || !product) {
       console.error(productError);
-      alert("Failed to create product.");
+      toast({ title: "Failed to create product", description: "Please try again.", duration: 4000 });
       return;
     }
 
@@ -98,7 +100,7 @@ const ProductCreate = () => {
 
     if (variantError) {
       console.error(variantError);
-      alert("Failed to create variants.");
+      toast({ title: "Failed to create variants", description: "Please try again.", duration: 4000 });
       return;
     }
 

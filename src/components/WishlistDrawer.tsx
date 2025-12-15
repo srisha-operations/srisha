@@ -54,14 +54,21 @@ const WishlistDrawer = ({ open, onOpenChange }: Props) => {
   // Remove item from wishlist
   // ---------------------------------------
   const handleRemove = async (productId: string) => {
+    // optimistic UI update
+    const prev = items;
+    setItems((cur) => cur.filter((p) => p.id !== productId));
+
     const user = await getCurrentUser();
     const uid = user?.id ?? null;
 
     try {
       await removeFromWishlist(uid, productId);
+      // service will emit wishlistUpdated; ensure items are fresh
       await loadWishlist();
     } catch (err) {
       console.error("remove wishlist failed", err);
+      // rollback
+      setItems(prev);
     }
   };
 
@@ -97,10 +104,10 @@ const WishlistDrawer = ({ open, onOpenChange }: Props) => {
 
               return (
                 <div
-                  key={`${product.id}-${index}`}
+                  key={product.id}
                   className="flex gap-4 items-start pb-6 border-b border-border last:border-0"
                 >
-                  <div className="flex-shrink-0 w-8 text-center pt-2">
+                    <div className="flex-shrink-0 w-8 text-center pt-2">
                     <span className="font-lato text-sm text-muted-foreground">
                       {index + 1}
                     </span>

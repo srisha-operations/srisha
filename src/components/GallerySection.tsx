@@ -113,7 +113,7 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
             {/* Block 3: 3× Portrait Grid (9:16) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
               {gallery?.three_grid?.map((image, idx) => (
-                <div key={idx} className="w-full aspect-[9/16] overflow-hidden">
+                  <div key={image.url || image.id} className="w-full aspect-[9/16] overflow-hidden">
                   <img
                     src={image?.image || ""}
                     alt={image.alt || ""}
@@ -174,7 +174,7 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
                   className="bg-transparent border border-white/90 text-white/90 hover:bg-[#F3EEE6] hover:text-[#2C2C2C] hover:border-[#2C2C2C] font-tenor tracking-wider px-8 py-6 text-base transition-all duration-500 rounded-none"
                   onClick={() => setIsExpanded(false)}
                 >
-                  Collapse
+                  COLLAPSE
                 </Button>
               </div>
             </div>

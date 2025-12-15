@@ -43,6 +43,7 @@ const Header = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   const isProductsPage = location.pathname === "/products";
+  const isOrdersPage = location.pathname.startsWith("/orders");
 
   useEffect(() => {
     const handleOpenProductModal = (e: Event) => {
@@ -257,7 +258,7 @@ const Header = () => {
 
   const isCheckoutPage = location.pathname === "/checkout";
   const showBackground =
-    isScrolled || isHovered || isSearchOpen || isProductsPage || isCheckoutPage;
+    isScrolled || isHovered || isSearchOpen || isProductsPage || isCheckoutPage || isOrdersPage;
 
   const textColor = showBackground ? "text-[#2C2C2C]" : "text-white/90";
   const iconColor = showBackground ? "#2C2C2C" : "#FFFFFF";
@@ -402,6 +403,12 @@ const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    onClick={() => navigate('/orders')}
+                    className="font-lato"
+                  >
+                    My Orders
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={handleSignOut}
                     className="font-lato"
                   >
@@ -462,6 +469,7 @@ const Header = () => {
         user={user}
         onSignOut={handleSignOut}
         onShopClick={handleShopClick}
+        onOrdersClick={() => navigate('/orders')}
         onContactClick={() => scrollToSection("footer-contact")}
       />
 

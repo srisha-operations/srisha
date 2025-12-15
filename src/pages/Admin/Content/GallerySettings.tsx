@@ -27,6 +27,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { uploadImage, getContent, updateContent } from "@/services/content";
+import { useToast } from "@/hooks/use-toast";
 
 
 // -----------------------------
@@ -126,6 +127,7 @@ const GallerySettings = () => {
   useEffect(() => {
     load();
   }, []);
+  const { toast } = useToast();
 
   const load = async () => {
     const { data } = await getContent("gallery");
@@ -162,19 +164,19 @@ const GallerySettings = () => {
   // -----------------------------
   const uploadAndSet = async (file: File, setter: (url: string) => void) => {
     const { url, error } = await uploadImage("gallery", file);
-    if (error) { alert("Upload failed"); return; }
+    if (error) { toast({ title: "Upload failed", description: "Image upload failed.", duration: 4000 }); return; }
     setter(url!);
   };
 
   const addPortraitGridImage = async (file: File) => {
     const { url, error } = await uploadImage("gallery", file);
-    if (error) { alert("Upload failed"); return; }
+    if (error) { toast({ title: "Upload failed", description: "Image upload failed.", duration: 4000 }); return; }
     setPortraitGrid([...portraitGrid, url!]);
   };
 
   const replacePortraitGridImage = async (index: number, file: File) => {
     const { url, error } = await uploadImage("gallery", file);
-    if (error) { alert("Upload failed"); return; }
+    if (error) { toast({ title: "Upload failed", description: "Image upload failed.", duration: 4000 }); return; }
 
     const updated = [...portraitGrid];
     updated[index] = url!;
@@ -205,8 +207,8 @@ const GallerySettings = () => {
 
     const { error } = await updateContent("gallery", payload);
 
-    if (error) alert("Save failed!");
-    else alert("Gallery updated!");
+    if (error) toast({ title: "Save failed", description: "Could not update gallery.", duration: 4000 });
+    else toast({ title: "Updated", description: "Gallery updated successfully.", duration: 3000 });
   };
 
 
