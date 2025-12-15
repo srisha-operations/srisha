@@ -1,264 +1,394 @@
+// src/components/ProductDetailModal.tsx
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Heart, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
+import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
+import { addToCart, submitPreorder } from "@/services/cart";
+import { getProductById } from "@/services/products";
+import { getCurrentUser } from "@/services/auth";
+import { toast } from "@/hooks/use-toast";
 
-interface Product {
-  id: string;
-  name: string;
-  price: string;
-  thumbDefault: string;
-  thumbHover?: string;
-  images?: string[];
-  wishlist: boolean;
-}
-
-interface ProductDetailModalProps {
-  product: Product | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-const ProductDetailModal = ({ product, open, onOpenChange }: ProductDetailModalProps) => {
+const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedImage, setSelectedImage] = useState<string>("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
-
-  const sizes = ["S", "M", "L", "XL", "XXL"];
-  const allImages = product?.images || [product?.thumbDefault, product?.thumbHover].filter(Boolean) as string[];
+  const [shopMode, setShopMode] = useState<"normal" | "inquiry">("normal");
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [cartAdded, setCartAdded] = useState(false);
+  const [resolvedProduct, setResolvedProduct] = useState<any>(product);
 
   useEffect(() => {
+    // load shop mode
+    // fetch wishlist status
+    (async () => {
+      if (product && open) {
+        const user = await getCurrentUser();
+        const ids = await listWishlist(user?.id ?? null);
+        setIsWishlisted(ids.includes(product.id));
+      }
+    })();
+  }, [product, open]);
+
+  useEffect(() => {
+    const onUpdated = async () => {
+      if (!product) return;
+      const user = await getCurrentUser();
+      const ids = await listWishlist(user?.id ?? null);
+      setIsWishlisted(ids.includes(product.id));
+    };
+
+    window.addEventListener("wishlistUpdated", onUpdated);
+    return () => window.removeEventListener("wishlistUpdated", onUpdated);
+  }, [product]);
+  useEffect(() => {
     if (product && open) {
-      setSelectedImage(product.thumbDefault);
+      const imgs = (product.product_images || [])
+        .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
+        .map((i: any) => i.url);
+      setSelectedImage(imgs[0] || "");
       setCurrentImageIndex(0);
       setSelectedSize("");
-      
-      // Load wishlist status
-      const wishlistData = localStorage.getItem("srisha_wishlist");
-      if (wishlistData) {
-        const wishlist = JSON.parse(wishlistData);
-        setIsWishlisted(wishlist.includes(product.id));
-      }
+      // If variants aren't present, fetch full product by id
+      (async () => {
+        if (!product.product_variants || product.product_variants.length === 0) {
+          try {
+            const { data: fresh } = await getProductById(product.id);
+            if (fresh) {
+              setResolvedProduct({ ...product, ...fresh });
+            } else {
+              setResolvedProduct(product);
+            }
+          } catch (err) {
+            setResolvedProduct(product);
+          }
+        } else {
+          setResolvedProduct(product);
+        }
+      })();
     }
   }, [product, open]);
 
-  const handleWishlistToggle = () => {
-    if (!product) return;
-    
-    const wishlistData = localStorage.getItem("srisha_wishlist");
-    let wishlist = wishlistData ? JSON.parse(wishlistData) : [];
-    
-    if (wishlist.includes(product.id)) {
-      wishlist = wishlist.filter((id: string) => id !== product.id);
-      setIsWishlisted(false);
-    } else {
-      wishlist.push(product.id);
-      setIsWishlisted(true);
-    }
-    
-    localStorage.setItem("srisha_wishlist", JSON.stringify(wishlist));
-    window.dispatchEvent(new Event("wishlistUpdated"));
-  };
+  const handleWishlistToggle = async () => {
+    const user = await getCurrentUser();
+    const uid = user?.id ?? null;
 
-  const handleInquire = () => {
-    if (!product) return;
-    
-    // Check if user is signed in
-    const userData = localStorage.getItem("srisha_user");
-    if (!userData) {
-      onOpenChange(false);
-      window.dispatchEvent(new CustomEvent("openAuthModal"));
+    if (!user) {
+      // For guests, we still allow local wishlist but encourage sign-in
+      // Optimistic update
+      const prev = isWishlisted;
+      setIsWishlisted(!prev);
+      try {
+        if (prev) {
+          await removeFromWishlist(uid, product.id);
+        } else {
+          await addToWishlist(uid, product.id);
+        }
+      } catch (err) {
+        setIsWishlisted(prev);
+        console.error("guest wishlist toggle failed", err);
+        toast({ title: "Could not update wishlist", description: "Please try again." });
+      }
       return;
     }
 
-    // Add to inquiries
-    const inquiriesData = localStorage.getItem("srisha_inquiries");
-    let inquiries = inquiriesData ? JSON.parse(inquiriesData) : [];
-    
-    if (!inquiries.includes(product.id)) {
-      inquiries.push(product.id);
-      localStorage.setItem("srisha_inquiries", JSON.stringify(inquiries));
-      
-      // Add to admin inquiries with details
-      const adminInquiriesData = localStorage.getItem("admin_inquiries");
-      let adminInquiries = adminInquiriesData ? JSON.parse(adminInquiriesData) : [];
-      const user = JSON.parse(userData);
-      
-      adminInquiries.push({
-        id: Date.now().toString(),
-        customerName: user.name || "Guest",
-        contact: user.email || user.phone || "",
-        date: new Date().toISOString(),
-        items: [{ productId: product.id, productName: product.name, size: selectedSize || "Not specified" }],
-        status: "Inquiry Received"
-      });
-      
-      localStorage.setItem("admin_inquiries", JSON.stringify(adminInquiries));
+    // Authenticated users: optimistic update
+    const prev = isWishlisted;
+    setIsWishlisted(!prev);
+    try {
+      if (prev) {
+        await removeFromWishlist(uid, product.id);
+      } else {
+        await addToWishlist(uid, product.id);
+      }
+    } catch (err) {
+      setIsWishlisted(prev);
+      console.error("wishlist toggle failed", err);
+      toast({ title: "Could not update wishlist", description: "Please try again." });
     }
-    
+  };
+
+  const handleAddToCart = async () => {
+    const user = await getCurrentUser();
+
+    // Trigger animation
+    setIsAddingToCart(true);
+    setCartAdded(true);
+
+    // Determine variant id if variants exist and a size is selected
+    let variant_id: string | null = null;
+    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+    if (hasVariants) {
+      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+      if (!v) {
+        toast({ title: 'Please select an available size' });
+        setIsAddingToCart(false);
+        setCartAdded(false);
+        return;
+      }
+      if (v.stock === 0) {
+        toast({ title: 'Selected size out of stock' });
+        setIsAddingToCart(false);
+        setCartAdded(false);
+        return;
+      }
+      variant_id = v.id;
+    }
+
+    // Always add to cart (local for guests). If guest, also prompt auth modal.
+    await addToCart({ product_id: resolvedProduct.id, variant_id, quantity: 1 }, user?.id);
+    window.dispatchEvent(new Event("cartUpdated"));
+
+    if (!user) {
+      // Encourage signing in/up but do not block adding to cart
+      window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }));
+    }
+
+    // End animation after 500ms then close
+    setTimeout(() => {
+      setIsAddingToCart(false);
+      setCartAdded(false);
+      onOpenChange(false);
+    }, 500);
+  };
+
+  const handlePreorderOrCheckout = async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      window.dispatchEvent(
+        new CustomEvent("openAuthModal", { detail: "signin" })
+      );
+      onOpenChange(false);
+      return;
+    }
+
+    // Decide shop mode by reading site_content 'shop_settings'
+    const { data: settings, error } = await (
+      await import("@/lib/supabaseClient")
+    ).supabase
+      .from("site_content")
+      .select("value")
+      .eq("key", "shop_settings")
+      .single();
+
+    const mode = settings?.value?.mode || "normal";
+
+    // If variants exist, require a selectedSize and validate stock
+    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+    if (hasVariants) {
+      if (!selectedSize) {
+        toast({ title: 'Please select a size' });
+        return;
+      }
+      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+      if (!v) {
+        toast({ title: 'Selected size unavailable' });
+        return;
+      }
+      if (v.stock === 0) {
+        toast({ title: 'Selected size out of stock' });
+        return;
+      }
+    }
+
+    if (mode === "inquiry") {
+      // set cart_items status -> 'inquired' for this user's relevant items
+      // add the item if not already in cart, then submit preorder for that product
+      await addToCart({ product_id: resolvedProduct.id, variant_id: hasVariants ? resolvedProduct.product_variants.find((x: any) => x.size === selectedSize).id : null, quantity: 1 }, user.id);
+      await submitPreorder(user.id); // marks all cart items for user as 'inquired'
+      toast({ title: "Preorder submitted!", description: "The store will contact you soon." });
+      window.dispatchEvent(new Event("cartUpdated"));
+      onOpenChange(false);
+      return;
+    }
+
+    // mode === normal -> add to cart and open CartDrawer
+    await addToCart({ product_id: resolvedProduct.id, variant_id: hasVariants ? resolvedProduct.product_variants.find((x: any) => x.size === selectedSize).id : null, quantity: 1 }, user.id);
+    window.dispatchEvent(new Event("cartUpdated"));
     // Open cart drawer
     window.dispatchEvent(new Event("openCartDrawer"));
-    
-    // Open WhatsApp
-    const message = encodeURIComponent(`I would like to inquire about ${product.name}`);
-    window.open(`https://wa.me/919000000000?text=${message}`, "_blank");
-  };
-
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
-    setSelectedImage(allImages[(currentImageIndex + 1) % allImages.length]);
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-    setSelectedImage(allImages[(currentImageIndex - 1 + allImages.length) % allImages.length]);
+    onOpenChange(false);
   };
 
   if (!product) return null;
 
+  const sizes = Array.from(
+    new Set(
+      (resolvedProduct?.product_variants || []).map((v: any) => v.size).filter(Boolean)
+    )
+  ) as string[];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] lg:max-w-[1200px] max-h-[95vh] p-0 overflow-hidden">
-        <DialogClose className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <X className="h-5 w-5 text-foreground" />
-          <span className="sr-only">Close</span>
+        <DialogClose className="absolute right-4 top-4 z-50">
+          <X className="h-5 w-5" />
         </DialogClose>
 
         <div className="overflow-y-auto max-h-[95vh]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-            {/* LEFT: Image Gallery */}
-            <div className="relative bg-muted p-4 lg:p-8">
-              {/* Desktop: Main image with thumbnails below */}
-              <div className="hidden lg:block">
-                <div className="w-full aspect-[4/5] mb-4 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-2">
+            <div className="p-4 lg:p-8">
+              <div className="w-full mb-4">
+                <div className="relative w-full bg-muted flex items-center justify-center">
                   <img
-                    src={selectedImage || product.thumbDefault}
+                    src={selectedImage}
                     alt={product.name}
-                    className="w-full h-full object-cover transition-opacity duration-300"
                     loading="lazy"
+                    decoding="async"
+                    className="w-full max-h-[60vh] object-contain"
                   />
-                </div>
-                
-                {/* Thumbnails */}
-                {allImages.length > 1 && (
-                  <div className="flex gap-2 justify-start overflow-x-auto scrollbar-hide">
-                    {allImages.map((img, idx) => (
+
+                  {/* left/right arrows */}
+                  {product.product_images?.length > 1 && (
+                    <>
                       <button
-                        key={idx}
                         onClick={() => {
-                          setSelectedImage(img);
+                          const next = (currentImageIndex - 1 + (product.product_images?.length || 1)) % (product.product_images?.length || 1);
+                          setCurrentImageIndex(next);
+                          setSelectedImage(product.product_images[next].url);
+                        }}
+                        aria-label="Previous image"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/70 p-2 rounded-full hover:bg-background"
+                      >
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const next = (currentImageIndex + 1) % (product.product_images?.length || 1);
+                          setCurrentImageIndex(next);
+                          setSelectedImage(product.product_images[next].url);
+                        }}
+                        aria-label="Next image"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/70 p-2 rounded-full hover:bg-background"
+                      >
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* thumbnails always visible */}
+                {product.product_images?.length > 1 && (
+                  <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+                    {product.product_images.map((img: any, idx: number) => (
+                      <button
+                        key={img.id || img.url || idx}
+                        aria-label={`Thumbnail ${idx + 1}`}
+                        onClick={() => {
+                          setSelectedImage(img.url);
                           setCurrentImageIndex(idx);
                         }}
                         className={cn(
-                          "flex-shrink-0 w-20 h-24 border-2 transition-all overflow-hidden",
-                          selectedImage === img ? "border-primary" : "border-transparent hover:border-muted-foreground"
+                          "w-20 h-24 flex-shrink-0 border-2 overflow-hidden",
+                          currentImageIndex === idx ? "border-primary" : "border-transparent"
                         )}
                       >
-                        <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                        <img src={img.url} alt={`Thumbnail ${idx + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-
-              {/* Mobile: Swipeable carousel */}
-              <div className="lg:hidden">
-                <div className="relative w-full aspect-[4/5] overflow-hidden">
-                  <img
-                    src={allImages[currentImageIndex]}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-opacity duration-300"
-                    loading="lazy"
-                  />
-                  
-                  {allImages.length > 1 && (
-                    <>
-                      <button
-                        onClick={prevImage}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 p-2 hover:bg-background transition-colors"
-                        aria-label="Previous image"
-                      >
-                        <ChevronLeft className="w-5 h-5 text-foreground" />
-                      </button>
-                      <button
-                        onClick={nextImage}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 p-2 hover:bg-background transition-colors"
-                        aria-label="Next image"
-                      >
-                        <ChevronRight className="w-5 h-5 text-foreground" />
-                      </button>
-                      
-                      {/* Image counter */}
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 px-3 py-1 text-xs font-lato">
-                        {currentImageIndex + 1} / {allImages.length}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
             </div>
 
-            {/* RIGHT: Product Details */}
-            <div className="p-6 lg:p-8 flex flex-col">
-              <h2 className="text-2xl lg:text-3xl font-tenor text-foreground mb-2">{product.name}</h2>
-              <p className="text-xl lg:text-2xl font-lato text-foreground mb-6">{product.price}</p>
+            <div className="p-6 lg:p-8">
+              <h2 className="text-2xl font-tenor mb-2">{product.name}</h2>
+              <p className="text-xl mb-6">{formatPrice(Number(resolvedProduct?.price ?? resolvedProduct?.displayPrice ?? 0))}</p>
 
-              {/* Size Selection */}
               <div className="mb-6">
-                <label className="text-sm font-lato text-muted-foreground mb-3 block">SELECT SIZE</label>
+                <label className="text-sm text-muted-foreground block mb-3">
+                  SELECT SIZE
+                </label>
                 <div className="flex gap-2 flex-wrap">
-                  {sizes.map((size) => (
+                  {sizes.map((s) => {
+                    const variantForSize = (resolvedProduct?.product_variants || []).find((v: any) => v.size === s);
+                    const disabled = !variantForSize || variantForSize.stock === 0 || variantForSize.visible === false;
+                    return (
                     <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
+                      key={s}
+                      onClick={() => { if (!disabled) setSelectedSize(s); }}
                       className={cn(
-                        "px-4 py-2 border font-lato text-sm transition-colors",
-                        selectedSize === size
+                        "px-4 py-2 border",
+                        selectedSize === s
                           ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-foreground border-border hover:bg-muted"
+                          : disabled
+                          ? "bg-background border-border opacity-50 cursor-not-allowed"
+                          : "bg-background border-border"
                       )}
                     >
-                      {size}
+                      {s}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Color Selection */}
-              <div className="mb-8">
-                <label className="text-sm font-lato text-muted-foreground mb-3 block">COLOR</label>
-                <div className="flex gap-2">
-                  <button className="w-10 h-10 border-2 border-primary bg-accent"></button>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
               <div className="flex gap-3 mb-8">
                 <Button
-                  variant="outline"
-                  onClick={handleWishlistToggle}
-                  className="flex-1 border-border text-foreground hover:bg-muted font-tenor"
-                >
-                  <Heart className={cn("w-4 h-4 mr-2", isWishlisted && "fill-current")} />
-                  WISHLIST
-                </Button>
+                    variant="outline"
+                    onClick={handleWishlistToggle}
+                    className="flex-1"
+                  >
+                    <Heart className={`w-4 h-4 mr-2 ${isWishlisted ? 'fill-accent text-accent' : 'text-foreground'}`} /> {isWishlisted ? 'WISHLISTED' : 'WISHLIST'}
+                  </Button>
                 <Button
-                  onClick={handleInquire}
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-tenor"
+                  onClick={async () => {
+                    // If there are variants, require size selection
+                    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+                    if (hasVariants && !selectedSize) {
+                      toast({ title: 'Please select a size' });
+                      return;
+                    }
+                    // Find variant id if exists
+                    let variant_id: string | null = null;
+                    if (hasVariants) {
+                      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+                      if (!v) {
+                        toast({ title: 'Selected size unavailable' });
+                        return;
+                      }
+                      if (v.stock === 0) {
+                        toast({ title: 'Selected size out of stock' });
+                        return;
+                      }
+                      variant_id = v.id;
+                    }
+                    setIsAddingToCart(true);
+                    setCartAdded(true);
+                    const user = await getCurrentUser();
+                    await addToCart({ product_id: resolvedProduct.id, variant_id, quantity: 1 }, user?.id);
+                    window.dispatchEvent(new Event('cartUpdated'));
+                    if (!user) window.dispatchEvent(new CustomEvent('openAuthModal', { detail: 'signin' }));
+                    setTimeout(() => { setIsAddingToCart(false); setCartAdded(false); onOpenChange(false); }, 500);
+                  }}
+                  disabled={(resolvedProduct?.product_variants || []).length > 0 && !selectedSize}
+                  className={`flex-1 bg-primary text-primary-foreground transition-all duration-220 ${
+                    isAddingToCart ? "scale-108" : "scale-100"
+                  } ${cartAdded ? "bg-green-600" : ""}`}
+                  aria-live="polite"
                 >
-                  INQUIRE
+                  {cartAdded ? "✓ Added" : "ADD TO CART"}
                 </Button>
               </div>
 
-              {/* Description */}
+              <div className="flex gap-3 mb-8">
+                <Button
+                  onClick={handlePreorderOrCheckout}
+                  className="w-full bg-secondary"
+                >
+                  PROCEED TO CART
+                </Button>
+              </div>
+
               <div className="border-t border-border pt-6">
-                <h3 className="text-sm font-tenor text-foreground mb-3">DESCRIPTION</h3>
-                <p className="text-sm font-lato text-muted-foreground leading-relaxed">
-                  This exquisite piece showcases traditional craftsmanship with contemporary design. 
-                  Each garment is carefully crafted with attention to detail, ensuring the highest quality 
-                  and timeless elegance.
+                <h3 className="text-sm font-tenor text-foreground mb-3">
+                  DESCRIPTION
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {product.description || "No description available."}
                 </p>
               </div>
             </div>

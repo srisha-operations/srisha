@@ -1,18 +1,60 @@
 import { Link } from "react-router-dom";
-import footerData from "@/data/footer.json";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { Instagram, Youtube, Facebook, MapPin, Mail } from "lucide-react";
+
+const socialIcons: Record<string, JSX.Element> = {
+  instagram: <Instagram className="w-4 h-4" />,
+  youtube: <Youtube className="w-4 h-4" />,
+  facebook: <Facebook className="w-4 h-4" />,
+};
+
+const otherIcons: Record<string, JSX.Element> = {
+  mappin: <MapPin className="w-4 h-4" />,
+  mail: <Mail className="w-4 h-4" />,
+};
 
 const Footer = () => {
+  const [footer, setFooter] = useState<any>(null);
+
+  useEffect(() => {
+    const loadFooter = async () => {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("value")
+        .eq("key", "footer")
+        .single();
+
+      if (!error && data?.value) {
+        setFooter(data.value);
+      } else {
+        // Fallback to static file
+        const fallback = await import("@/data/footer.json");
+        setFooter(fallback.default);
+      }
+    };
+
+    loadFooter();
+  }, []);
+
+  if (!footer) return null;
+
   return (
-    <footer id="footer-contact" className="w-full bg-background border-t border-border">
-      <div className="container mx-auto px-4 py-16 md:py-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
+    <footer
+      id="footer-contact"
+      className="w-full bg-background border-t border-border"
+    >
+      <div className="container mx-auto px-4 py-16 md:py-20 max-w-7xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 items-stretch justify-center">
           {/* Quick Links */}
-          <div>
-            <h3 className="font-tenor text-lg mb-6 text-foreground">Quick Links</h3>
+          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
+            <h3 className="font-tenor text-lg mb-6 text-foreground">
+              Quick Links
+            </h3>
             <ul className="space-y-3">
-              {footerData.quickLinks.map((link) => (
+              {footer?.quickLinks.map((link) => (
                 <li key={link.label}>
-                  <Link 
+                  <Link
                     to={link.url}
                     className="font-lato text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -24,27 +66,38 @@ const Footer = () => {
           </div>
 
           {/* Contact Us */}
-          <div>
-            <h3 className="font-tenor text-lg mb-6 text-foreground">Contact Us</h3>
+          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
+            <h3 className="font-tenor text-lg mb-6 text-foreground">
+              Contact Us
+            </h3>
             <div className="space-y-3 font-lato text-sm text-muted-foreground">
-              <p>{footerData.contact.address}</p>
-              <p>{footerData.contact.number}</p>
-              <p>{footerData.contact.email}</p>
+              <p className="flex items-center gap-2">
+                {otherIcons["mappin"]}
+                <span>{footer?.contact.address}</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span>{footer?.contact.number}</span>
+              </p>
+              <p className="flex items-center gap-2">
+                {otherIcons["mail"]}
+                <span>{footer?.contact.email}</span>
+              </p>
             </div>
           </div>
 
           {/* Socials */}
-          <div>
+          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
             <h3 className="font-tenor text-lg mb-6 text-foreground">Socials</h3>
             <ul className="space-y-3">
-              {footerData.socials.map((social) => (
+              {footer?.socials.map((social) => (
                 <li key={social.label}>
                   <a
                     href={social.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-lato text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex items-center gap-2 font-lato text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
+                    {socialIcons[social.type] || null}
                     {social.label}
                   </a>
                 </li>
@@ -57,7 +110,7 @@ const Footer = () => {
       {/* Copyright */}
       <div className="border-t border-border py-6">
         <p className="text-center font-lato text-sm text-muted-foreground">
-          {footerData.copyright}
+          {footer?.copyright}
         </p>
       </div>
     </footer>

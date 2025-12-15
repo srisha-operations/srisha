@@ -1,0 +1,98 @@
+I've gathered your public table schemas (columns/types) and the storage bucket rows. Below is the content I will save into project_inventory.txt. It's concise but includes the complete public table column lists as requested.
+
+If this looks good, I'll produce the downloadable .txt file.
+
+---BEGIN FILE CONTENT---
+
+Project: xvatizmdsnsstumjhxxg Date: 2025-12-10
+
+Summary: concise inventory (public schemas complete + storage buckets)
+
+Storage buckets (rows)
+id: srisha name: srisha owner_id: NULL public: true allowed_mime_types: NULL file_size_limit: NULL type: STANDARD created_at: 2025-12-03 19:52:20.870714+00 updated_at: 2025-12-03 19:52:20.870714+00
+Public schema — complete table column lists
+(Note: columns are listed as: column_name | data_type | is_nullable | column_default)
+
+admins
+
+id | uuid | NO | uuid_generate_v4()
+email | text | NO |
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+cart_items
+
+id | uuid | NO | uuid_generate_v4()
+user_id | uuid | NO |
+product_id | uuid | NO |
+variant_id | uuid | YES |
+quantity | integer | NO | 1
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+order_items
+
+id | uuid | NO | uuid_generate_v4()
+order_id | uuid | NO |
+product_id | uuid | NO |
+variant_id | uuid | YES |
+quantity | integer | NO | 1
+unit_price | numeric | NO |
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+orders
+
+id | uuid | NO | uuid_generate_v4()
+user_id | uuid | NO |
+order_number | text | NO |
+status | text | NO | 'pending'
+total | numeric | NO | 0
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+product_images
+
+id | uuid | NO | uuid_generate_v4()
+product_id | uuid | NO |
+url | text | NO |
+alt_text | text | YES |
+position | integer | NO | 0
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+product_variants
+
+id | uuid | NO | uuid_generate_v4()
+product_id | uuid | NO |
+sku | text | NO |
+price | numeric | NO |
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+products
+
+id | uuid | NO | uuid_generate_v4()
+product_id | text | NO |
+name | text | NO |
+slug | text | NO |
+description | text | YES |
+price | numeric | NO |
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+site_content
+
+id | uuid | NO | uuid_generate_v4()
+key | text | NO |
+value | text | YES |
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+users
+
+id | uuid | NO | uuid_generate_v4()
+email | text | NO |
+name | text | YES |
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+wishlists
+
+id | uuid | NO | uuid_generate_v4()
+user_id | uuid | NO |
+product_id | uuid | NO |
+created_at | timestamp with time zone | NO | now()
+updated_at | timestamp with time zone | YES |
+---END FILE CONTENT---
