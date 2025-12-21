@@ -78,24 +78,46 @@ export const createOrder = async (
       if (res.error) throw res.error;
       orderData = res.data;
     } catch (errPrimary) {
-      // Primary insert failed — attempt fallback with total_amount
-      console.warn("Primary order insert failed, attempting fallback:", errPrimary);
-      const fallback = {
-        order_number: orderNumber,
-        order_status: "PENDING",
-        total_amount: payload.total_amount ?? 0,
-      } as any;
-      if (userId) fallback.user_id = userId;
-      // For non-preorder, set payment_status if the column exists in older schema
-      if (!payload.is_preorder) {
-        (fallback as any).payment_status = "INITIATED";
-      }
+      // Check if error is duplicate key (order_number uniqueness constraint)
+      const errorMsg = (errPrimary as any)?.message || "";
+      const isDuplicateKeyError = 
+        (errPrimary as any)?.code === "23505" || 
+        errorMsg.includes("duplicate key");
 
-      const res2 = await supabase.from("orders").insert(fallback).select("id").single();
-      if (res2.error) {
-        throw new Error(`Failed to create order (fallback): ${res2.error.message}`);
+      if (isDuplicateKeyError) {
+        // Order with this order_number already exists
+        // Make createOrder idempotent: return the existing order instead of failing
+        console.warn("Order number already exists, returning existing order:", orderNumber);
+        const { data: existingOrder, error: selectError } = await supabase
+          .from("orders")
+          .select("id")
+          .eq("order_number", orderNumber)
+          .single();
+
+        if (selectError || !existingOrder?.id) {
+          throw new Error(`Failed to retrieve existing order: ${selectError?.message || "unknown error"}`);
+        }
+        orderData = existingOrder;
+      } else {
+        // Not a duplicate key error - try fallback insert with minimal fields
+        console.warn("Primary order insert failed, attempting fallback:", errPrimary);
+        const fallback = {
+          order_number: orderNumber,
+          order_status: "PENDING",
+          total_amount: payload.total_amount ?? 0,
+        } as any;
+        if (userId) fallback.user_id = userId;
+        // For non-preorder, set payment_status
+        if (!payload.is_preorder) {
+          (fallback as any).payment_status = "INITIATED";
+        }
+
+        const res2 = await supabase.from("orders").insert(fallback).select("id").single();
+        if (res2.error) {
+          throw new Error(`Failed to create order (fallback): ${res2.error.message}`);
+        }
+        orderData = res2.data;
       }
-      orderData = res2.data;
     }
 
     if (!orderData?.id) throw new Error("Order insert did not return id");
