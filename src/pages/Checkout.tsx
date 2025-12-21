@@ -231,6 +231,8 @@ const Checkout = () => {
 
       // Initiate payment via backend service
       // The backend will create payment intent and return safe data
+      console.log("Razorpay script loaded:", typeof (window as any).Razorpay);
+      
       const paymentResult = await initiatePayment({
         orderId: result.orderId,
         orderNumber: result.orderNumber,
@@ -240,72 +242,109 @@ const Checkout = () => {
         customerPhone: shipping.phone,
       });
 
+      console.log("Payment initiation response:", paymentResult);
+
       // Open Razorpay Checkout modal with order details from backend
       if (paymentResult.razorpayOrderId && paymentResult.razorpayKeyId) {
-        // Razorpay checkout options
-        const options = {
-          key: paymentResult.razorpayKeyId,
-          amount: total * 100, // Amount in paise
-          currency: "INR",
-          name: "SRISHA",
-          description: `Order ${result.orderNumber}`,
-          order_id: paymentResult.razorpayOrderId,
-          customer_notification: 1, // Razorpay will send SMS/email
-          prefill: {
-            name: shipping.name,
-            email: shipping.email || user?.email || "",
-            contact: shipping.phone,
-          },
-          theme: {
-            color: "#000000", // SRISHA brand color
-          },
-          callback_url: undefined, // Will handle in modal callbacks instead
-        };
-
-        // Handle Razorpay checkout
-        const razorpay = (window as any).Razorpay;
-        if (!razorpay) {
-          console.error("Razorpay script not loaded");
+        // Defensive check: ensure Razorpay script is loaded
+        const RazorpayClass = (window as any).Razorpay;
+        if (!RazorpayClass) {
+          console.error("Razorpay script not loaded. Window.Razorpay is undefined.");
+          console.error("Checked at:", new Date().toISOString());
+          console.error("window object keys related to Razorpay:", 
+            Object.keys(window).filter(key => key.toLowerCase().includes('razor')));
           toast({
-            title: "Payment initialization failed",
-            description: "Payment gateway is not available. Please try again.",
+            title: "Payment gateway error",
+            description: "Razorpay is not available. Please reload and try again.",
             duration: 4000,
           });
           navigate(`/orders/${result.orderId}`);
           return;
         }
 
-        // Create Razorpay instance and open checkout
-        const checkout = new razorpay(options);
+        try {
+          // Razorpay checkout options
+          const options = {
+            key: paymentResult.razorpayKeyId,
+            amount: total * 100, // Amount in paise
+            currency: "INR",
+            name: "SRISHA",
+            description: `Order ${result.orderNumber}`,
+            order_id: paymentResult.razorpayOrderId,
+            customer_notification: 1, // Razorpay will send SMS/email
+            prefill: {
+              name: shipping.name,
+              email: shipping.email || user?.email || "",
+              contact: shipping.phone,
+            },
+            theme: {
+              color: "#000000", // SRISHA brand color
+            },
+            // Callback handlers
+            handler: function (response: any) {
+              // This is called after successful payment
+              console.log("Payment successful. Razorpay response:", response);
+              toast({
+                title: "Payment successful",
+                description: "Your order has been confirmed.",
+                duration: 4000,
+              });
+              navigate(`/orders/${result.orderId}`);
+            },
+          };
 
-        // Handle payment failure
-        checkout.on("payment.failed", function (response: any) {
-          console.log("Payment failed:", response.error);
+          console.log("Creating Razorpay checkout with options:", JSON.stringify(options, null, 2));
+          
+          // Create Razorpay instance
+          const checkout = new RazorpayClass(options);
+          console.log("Razorpay checkout instance created successfully");
+
+          // Handle payment failure
+          checkout.on("payment.failed", function (response: any) {
+            console.error("Payment failed. Razorpay error:", response.error);
+            toast({
+              title: "Payment failed",
+              description: "Please try again or contact support.",
+              duration: 4000,
+            });
+            // Navigate to order page - order still exists
+            navigate(`/orders/${result.orderId}`);
+          });
+
+          // Handle modal dismissal (user closes without paying)
+          checkout.on("payment.dismiss", function () {
+            console.log("Payment modal dismissed by user");
+            // Poll to check if payment actually went through
+            setTimeout(() => {
+              console.log("Checking payment status after modal close...");
+            }, 500);
+            toast({
+              title: "Payment cancelled",
+              description: "You can complete payment later from your orders.",
+              duration: 4000,
+            });
+            // Navigate to order page - order still exists
+            navigate(`/orders/${result.orderId}`);
+          });
+
+          console.log("About to call checkout.open()...");
+          // Open the checkout modal - MUST happen before any navigation
+          checkout.open();
+          console.log("checkout.open() called successfully");
+        } catch (error) {
+          console.error("Error creating/opening Razorpay checkout:", error);
+          console.error("Error stack:", (error as any).stack);
           toast({
-            title: "Payment failed",
-            description: "Please try again or contact support.",
+            title: "Payment error",
+            description: "Failed to open payment modal. Please try again.",
             duration: 4000,
           });
-          // Navigate to order page - order still exists
           navigate(`/orders/${result.orderId}`);
-        });
-
-        // Handle modal dismissal (user closes without paying)
-        checkout.on("payment.dismiss", function () {
-          console.log("Payment modal dismissed");
-          toast({
-            title: "Payment cancelled",
-            description: "You can complete payment later from your orders.",
-            duration: 4000,
-          });
-          // Navigate to order page - order still exists
-          navigate(`/orders/${result.orderId}`);
-        });
-
-        // Open the checkout modal
-        checkout.open();
+        }
       } else {
         // Fallback if Razorpay details not available
+        console.warn("Razorpay payment details not available:", paymentResult);
+        console.warn("Expected razorpayOrderId and razorpayKeyId in response");
         toast({
           title: "Payment initiated",
           description: `Order #${result.orderNumber} is ready. Waiting for payment confirmation...`,
