@@ -1,6 +1,8 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
+import { clearCart } from "@/services/cart";
+import { clearWishlist } from "@/services/wishlist";
 import { 
   LayoutDashboard, 
   FileText, 
@@ -14,7 +16,18 @@ import {
 
 const AdminLayout = () => {
   const navigate = useNavigate();
+  
   const handleLogout = async () => {
+    try {
+      await clearCart();
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await clearWishlist();
+    } catch (e) {
+      /* ignore */
+    }
     await supabase.auth.signOut();
     // Use router navigation rather than hard reload
     navigate('/admin/signin', { replace: true });
@@ -72,85 +85,6 @@ const AdminLayout = () => {
               <Package className="w-4 h-4" />
               Products
             </NavLink>
-          </div>
-
-          {/* Content Management Section */}
-          <div className="mb-6">
-            <div className="px-3 mb-3">
-              <p className="font-tenor text-xs tracking-widest text-muted-foreground uppercase">Content</p>
-            </div>
-
-            <div className="space-y-1">
-              <NavLink
-                to="/admin/content/brand"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 pl-10 rounded-lg font-lato text-sm transition-colors ${
-                    isActive
-                      ? "bg-white text-foreground font-semibold shadow-sm border border-border"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                  }`
-                }
-              >
-                <FileText className="w-3 h-3" />
-                Brand
-              </NavLink>
-
-              <NavLink
-                to="/admin/content/hero"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 pl-10 rounded-lg font-lato text-sm transition-colors ${
-                    isActive
-                      ? "bg-white text-foreground font-semibold shadow-sm border border-border"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                  }`
-                }
-              >
-                <Image className="w-3 h-3" />
-                Hero
-              </NavLink>
-
-              <NavLink
-                to="/admin/content/gallery"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 pl-10 rounded-lg font-lato text-sm transition-colors ${
-                    isActive
-                      ? "bg-white text-foreground font-semibold shadow-sm border border-border"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                  }`
-                }
-              >
-                <Image className="w-3 h-3" />
-                Gallery
-              </NavLink>
-
-              <NavLink
-                to="/admin/content/footer"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 pl-10 rounded-lg font-lato text-sm transition-colors ${
-                    isActive
-                      ? "bg-white text-foreground font-semibold shadow-sm border border-border"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                  }`
-                }
-              >
-                <Settings className="w-3 h-3" />
-                Footer
-              </NavLink>
-
-              <NavLink
-                to="/admin/content/shop"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2 pl-10 rounded-lg font-lato text-sm transition-colors ${
-                    isActive
-                      ? "bg-white text-foreground font-semibold shadow-sm border border-border"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                  }`
-                }
-              >
-                <Settings className="w-3 h-3" />
-                Shop Settings
-              </NavLink>
-            </div>
           </div>
 
           {/* Orders Section */}

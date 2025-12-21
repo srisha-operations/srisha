@@ -1,82 +1,106 @@
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
+import { clearCart } from "@/services/cart";
+import { clearWishlist } from "@/services/wishlist";
 import { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 
 const RequireAdmin = () => {
   const [loading, setLoading] = useState(true);
-  const [allowed, setAllowed] = useState(false);
-
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    let sub: any;
-    const check = async () => {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // No session – redirect to admin signin
-        setAllowed(false);
-        setLoading(false);
-        toast({ title: 'Admin sign-in required', description: 'Please sign in with an admin account.' });
-        navigate('/admin/signin', { replace: true });
-        return;
-      }
+    let isMounted = true;
 
-      let adminRow: any = null;
+    const checkAdmin = async () => {
       try {
-        const res = await supabase.from("admins").select("id, role").eq("id", session.user.id).single();
-        if (res.error) {
-          const fallback = await supabase.from("admins").select("id").eq("id", session.user.id).single();
-          adminRow = fallback.data;
-        } else {
-          adminRow = res.data;
+        // Step 1: Get current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+
+        if (sessionError || !session) {
+          // No session – not admin
+          setIsAdmin(false);
+          setLoading(false);
+          return;
         }
-      } catch (err) {
-        const fallback = await supabase.from("admins").select("id").eq("id", session.user.id).single();
-        adminRow = fallback.data;
-      }
 
-      if (!adminRow || (adminRow.role && adminRow.role !== 'admin')) {
-        // Not an admin – sign out and send to signin
-        try { await supabase.auth.signOut(); } catch (err) { /* ignore */ }
-        setAllowed(false);
+        // Step 2: Check if user is in admins table
+        const { data: adminRow, error: adminError } = await supabase
+          .from("admins")
+          .select("id, role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (!isMounted) return;
+
+        if (adminError || !adminRow) {
+          // Not in admins table – not admin
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
+        // Step 3: Verify role is 'admin' (if role column exists)
+        if (adminRow.role && adminRow.role !== "admin") {
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
+        // All checks passed
+        setIsAdmin(true);
         setLoading(false);
-        toast({ title: 'Access denied', description: 'Signed out - admin access required.' });
-        navigate('/admin/signin', { replace: true });
-        return;
+      } catch (err) {
+        console.error("Admin check error:", err);
+        if (isMounted) {
+          setIsAdmin(false);
+          setLoading(false);
+        }
       }
-
-      setAllowed(true);
-      setLoading(false);
     };
 
-    // initial check
-    check();
-
-    // Listen for auth state changes (login/logout) and re-check
-    sub = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // re-run the check whenever auth state changes
-      await check();
-    });
+    checkAdmin();
 
     return () => {
-      if (sub && typeof sub.data?.unsubscribe === 'function') sub.data.unsubscribe();
+      isMounted = false;
     };
-  }, [navigate]);
+  }, []);
 
   const handleSignOut = async () => {
+    try {
+      await clearCart();
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await clearWishlist();
+    } catch (e) {
+      /* ignore */
+    }
     await supabase.auth.signOut();
-    navigate('/admin/signin');
+    navigate("/admin/signin", { replace: true });
   };
 
-  if (loading) return null;
-  // If not allowed, redirect to admin sign-in
-  if (!allowed) {
+  // Still checking auth
+  if (loading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin border-4 border-gray-200 border-t-primary rounded-full w-10 h-10 mx-auto mb-3" />
+          <div className="text-sm text-muted-foreground">Checking admin access…</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Auth check complete: not an admin, redirect to signin
+  if (!isAdmin) {
     return <Navigate to="/admin/signin" replace />;
   }
 
+  // Auth check complete: is admin, render outlet
   return <Outlet />;
 };
 

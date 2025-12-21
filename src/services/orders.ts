@@ -11,7 +11,8 @@ export interface Order {
   shipping_address?: Record<string, any>;
   total_amount?: number;
   total?: number;
-  status: "pending_payment" | "pending_approval" | "processing" | "shipped" | "delivered" | "cancelled";
+  order_status: "PENDING" | "CONFIRMED" | "DISPATCHED" | "DELIVERED" | "CANCELLED";
+  payment_status?: "INITIATED" | "PAID" | "FAILED" | "REFUNDED";
   is_preorder?: boolean;
   created_at: string;
   updated_at?: string;
@@ -43,7 +44,7 @@ export const listOrders = async (
 
     // Apply filters
     if (filter?.status) {
-      query = query.eq("status", filter.status);
+      query = query.eq("order_status", filter.status);
     }
 
     if (filter?.search) {
@@ -121,12 +122,12 @@ export const getOrderItems = async (orderId: string): Promise<OrderItem[]> => {
  */
 export const updateOrderStatus = async (
   orderId: string,
-  status: Order["status"]
+  status: Order["order_status"]
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
       .from("orders")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({ order_status: status, updated_at: new Date().toISOString() })
       .eq("id", orderId);
 
     if (error) {
@@ -175,7 +176,7 @@ export const createOrderEvent = async (orderId: string, event: { type: string; p
 /**
  * Notify customer about an order status change via an edge function (best-effort).
  */
-export const notifyCustomerOrderStatusChange = async (orderId: string, status: Order["status"]) => {
+export const notifyCustomerOrderStatusChange = async (orderId: string, status: Order["order_status"]) => {
   try {
     const { supabase: sb } = await import("@/lib/supabaseClient");
     if (sb?.functions?.invoke) {

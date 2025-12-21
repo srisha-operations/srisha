@@ -31,11 +31,22 @@ export function formatPrice(price: number | string): string {
 }
 
 /**
- * Humanize a snake_case or kebab-case status to Title Case.
+ * Humanize a snake_case, kebab-case, or UPPERCASE_ENUM status to Title Case.
  * Example: 'pending_payment' -> 'Pending Payment'
+ * Example: 'PENDING' -> 'Pending'
  */
 export function humanizeStatus(status?: string | null): string {
   if (!status) return "Unknown";
+  
+  // Handle uppercase enums (PENDING, CONFIRMED, etc.)
+  if (status === status.toUpperCase()) {
+    return status
+      .split("_")
+      .map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
+      .join(" ");
+  }
+  
+  // Handle snake_case or kebab-case
   const replaced = status.replace(/[-_]+/g, " ");
   return replaced
     .split(" ")

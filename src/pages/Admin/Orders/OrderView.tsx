@@ -54,7 +54,7 @@ const OrderView = () => {
   const handleStatusChange = async (newStatus: string) => {
     const orderId = id;
     if (!orderId) return;
-    const result = await updateOrderStatus(orderId, newStatus as Order["status"]);
+    const result = await updateOrderStatus(orderId, newStatus as Order["order_status"]);
     if (result.success) {
       toast({ title: "Order status updated", duration: 2000 });
       loadOrder();
@@ -113,20 +113,19 @@ const OrderView = () => {
               <div>
                 <p className="text-xs text-muted-foreground uppercase font-medium">Status</p>
                 <div className="flex items-center gap-2">
-                  <Select value={order.status} onValueChange={handleStatusChange}>
+                  <Select value={order.order_status} onValueChange={handleStatusChange}>
                   <SelectTrigger className="w-full font-lato">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending_payment">Pending Payment</SelectItem>
-                    <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                    <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                    <SelectItem value="DELIVERED">Delivered</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
                   </SelectContent>
                   </Select>
-                  <span className="text-sm text-muted-foreground">{humanizeStatus(order.status)}</span>
+                  <span className="text-sm text-muted-foreground">{humanizeStatus(order.order_status)}</span>
                 </div>
               </div>
               <div>

@@ -224,7 +224,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] lg:max-w-[1200px] max-h-[95vh] p-0 overflow-hidden">
         <DialogClose className="absolute right-4 top-4 z-50">
-          <X className="h-5 w-5" />
+          {/* <X className="h-5 w-5" /> */}
         </DialogClose>
 
         <div className="overflow-y-auto max-h-[95vh]">
@@ -377,7 +377,8 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
               <div className="flex gap-3 mb-8">
                 <Button
                   onClick={handlePreorderOrCheckout}
-                  className="w-full bg-secondary"
+                  className="w-full bg-secondary text-foreground fill-accent text-accent"
+                  variant="outline"
                 >
                   PROCEED TO CART
                 </Button>

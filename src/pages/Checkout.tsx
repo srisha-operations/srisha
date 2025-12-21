@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/services/auth";
 import { listCart } from "@/services/cart";
 import { createOrder, createPreorder, getShopMode } from "@/services/checkout";
 import { clearCart } from "@/services/cart";
+import { initiatePayment } from "@/services/payment";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -219,44 +220,35 @@ const Checkout = () => {
         user?.id
       );
 
-      toast({ title: `Order created!`, description: `Order #${result.orderNumber}. Proceed to payment.`, duration: 4000 });
+      toast({ title: `Order created!`, description: `Order #${result.orderNumber}. Initiating payment...`, duration: 4000 });
 
-      // Clear the cart so the UI shows no items and redirect to orders page before UPI handling.
+      // Clear the cart so the UI shows no items
       try {
         await clearCart(user?.id);
       } catch (e) {
         console.error("Failed to clear cart post-order", e);
       }
 
-      // Redirect to the orders page
+      // Initiate payment via backend service
+      // The backend will create payment intent and return safe data
+      const paymentResult = await initiatePayment({
+        orderId: result.orderId,
+        orderNumber: result.orderNumber,
+        amount: total,
+        customerEmail: shipping.email || user?.email || "",
+        customerName: shipping.name,
+        customerPhone: shipping.phone,
+      });
+
+      // Always redirect if order was created (regardless of payment initiation result)
+      // Order creation is the source of truth, not payment initiation
+      toast({
+        title: "Payment initiated",
+        description: `Order #${result.orderNumber} is ready. Waiting for payment confirmation...`,
+        duration: 4000,
+      });
+
       navigate('/orders');
-
-      // Open UPI link for manual payment. Guard for desktop browsers where UPI deep links won't work.
-      const upiLink = `upi://pay?pa=${OWNER_UPI}&pn=SRISHA&am=${total}&tn=Order%20${result.orderNumber}`;
-
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      );
-
-      if (isMobile) {
-        // Try to open UPI link (this should open the UPI app on mobile)
-        window.open(upiLink, "_blank");
-      } else {
-        try {
-          await navigator.clipboard.writeText(upiLink);
-          toast({
-            title: "UPI link copied",
-            description: "Open this link on a UPI-compatible mobile app to complete the payment.",
-            duration: 6000,
-          });
-        } catch (err) {
-          toast({
-            title: "UPI payment",
-            description: "UPI links open on mobile devices. Please open the order page on your phone to complete the payment.",
-            duration: 6000,
-          });
-        }
-      }
     } catch (e) {
       console.error("Order creation failed:", e);
       toast({ title: "Failed to create order", description: (e as any).message || "Please try again." });
