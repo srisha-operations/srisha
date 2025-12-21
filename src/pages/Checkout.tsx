@@ -240,15 +240,79 @@ const Checkout = () => {
         customerPhone: shipping.phone,
       });
 
-      // Always redirect if order was created (regardless of payment initiation result)
-      // Order creation is the source of truth, not payment initiation
-      toast({
-        title: "Payment initiated",
-        description: `Order #${result.orderNumber} is ready. Waiting for payment confirmation...`,
-        duration: 4000,
-      });
+      // Open Razorpay Checkout modal with order details from backend
+      if (paymentResult.razorpayOrderId && paymentResult.razorpayKeyId) {
+        // Razorpay checkout options
+        const options = {
+          key: paymentResult.razorpayKeyId,
+          amount: total * 100, // Amount in paise
+          currency: "INR",
+          name: "SRISHA",
+          description: `Order ${result.orderNumber}`,
+          order_id: paymentResult.razorpayOrderId,
+          customer_notification: 1, // Razorpay will send SMS/email
+          prefill: {
+            name: shipping.name,
+            email: shipping.email || user?.email || "",
+            contact: shipping.phone,
+          },
+          theme: {
+            color: "#000000", // SRISHA brand color
+          },
+          callback_url: undefined, // Will handle in modal callbacks instead
+        };
 
-      navigate('/orders');
+        // Handle Razorpay checkout
+        const razorpay = (window as any).Razorpay;
+        if (!razorpay) {
+          console.error("Razorpay script not loaded");
+          toast({
+            title: "Payment initialization failed",
+            description: "Payment gateway is not available. Please try again.",
+            duration: 4000,
+          });
+          navigate(`/orders/${result.orderId}`);
+          return;
+        }
+
+        // Create Razorpay instance and open checkout
+        const checkout = new razorpay(options);
+
+        // Handle payment failure
+        checkout.on("payment.failed", function (response: any) {
+          console.log("Payment failed:", response.error);
+          toast({
+            title: "Payment failed",
+            description: "Please try again or contact support.",
+            duration: 4000,
+          });
+          // Navigate to order page - order still exists
+          navigate(`/orders/${result.orderId}`);
+        });
+
+        // Handle modal dismissal (user closes without paying)
+        checkout.on("payment.dismiss", function () {
+          console.log("Payment modal dismissed");
+          toast({
+            title: "Payment cancelled",
+            description: "You can complete payment later from your orders.",
+            duration: 4000,
+          });
+          // Navigate to order page - order still exists
+          navigate(`/orders/${result.orderId}`);
+        });
+
+        // Open the checkout modal
+        checkout.open();
+      } else {
+        // Fallback if Razorpay details not available
+        toast({
+          title: "Payment initiated",
+          description: `Order #${result.orderNumber} is ready. Waiting for payment confirmation...`,
+          duration: 4000,
+        });
+        navigate(`/orders/${result.orderId}`);
+      }
     } catch (e) {
       console.error("Order creation failed:", e);
       toast({ title: "Failed to create order", description: (e as any).message || "Please try again." });
@@ -503,8 +567,8 @@ const Checkout = () => {
 
                 {mode === "normal" && (
                   <div className="text-sm text-muted-foreground bg-muted p-3 rounded">
-                    <p className="mb-2">💳 Payment via UPI</p>
-                    <p>You will be redirected to payment after submitting your order.</p>
+                    <p className="mb-2">💳 Secure Payment via Razorpay</p>
+                    <p>You will be redirected to a secure payment gateway after submitting your order.</p>
                   </div>
                 )}
               </div>
