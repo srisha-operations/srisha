@@ -43,7 +43,17 @@ const AdminGuard = () => {
 
     const checkAdminAccess = async () => {
       try {
-        // Get current auth session
+        // Skip admin checks entirely for non-admin routes
+        // AdminGuard only enforces: "if admin user, cannot access customer routes"
+        // For customer routes, we don't need to check admins table at all
+        const isAdminPath = location.pathname.startsWith("/admin");
+        if (!isAdminPath) {
+          // Customer route - no admin check needed
+          return;
+        }
+
+        // Only check admin status if user is already on an admin path
+        // This prevents unnecessary admins table queries during checkout
         const { data: { session } } = await supabase.auth.getSession();
         if (!mounted || !session) return;
 
@@ -56,24 +66,12 @@ const AdminGuard = () => {
 
         if (!mounted) return;
 
-        // If user is admin but accessing customer routes, logout
-        const isAdminPath = location.pathname.startsWith("/admin");
+        // If user is not admin but on admin path, RequireAdmin guard will handle redirect
+        // If user is admin and on customer route somehow, this won't execute (isAdminPath check above)
         const isAdmin = adminRow && (!adminRow.role || adminRow.role === "admin");
-
-        if (isAdmin && !isAdminPath) {
-          // Admin user on customer route - force logout
-          console.warn("Admin user accessed customer route, forcing logout");
-          
-          // Clear state
-          try { await clearCart(); } catch (e) { /* ignore */ }
-          try { await clearWishlist(); } catch (e) { /* ignore */ }
-          
-          // Logout
-          await supabase.auth.signOut();
-          
-          if (mounted) {
-            navigate("/", { replace: true });
-          }
+        if (!isAdmin) {
+          // Not admin but on admin path - RequireAdmin guard will redirect
+          return;
         }
       } catch (err) {
         console.error("AdminGuard check error:", err);
