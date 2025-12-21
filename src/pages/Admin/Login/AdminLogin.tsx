@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { clearCart } from "@/services/cart";
+import { clearWishlist } from "@/services/wishlist";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +16,10 @@ const AdminSignin = () => {
 
   const handleLogin = async () => {
     setError("");
+
+    // Clear local guest state to avoid merging it into an admin account
+    try { localStorage.removeItem('srisha_cart'); } catch (e) {}
+    try { localStorage.removeItem('srisha_wishlist'); } catch (e) {}
 
     // Login via Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -56,6 +62,18 @@ const AdminSignin = () => {
       setNotAdminUserId(data.user.id);
       await supabase.auth.signOut();
       return;
+    }
+
+    // Clear any customer state (cart, wishlist) to avoid cross-account leakage
+    try {
+      await clearCart(data.user.id);
+    } catch (e) {
+      console.error("Failed to clear cart on admin login", e);
+    }
+    try {
+      await clearWishlist(data.user.id);
+    } catch (e) {
+      console.error("Failed to clear wishlist on admin login", e);
     }
 
     navigate("/admin");

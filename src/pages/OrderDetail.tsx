@@ -49,8 +49,17 @@ const OrderDetail = () => {
             <div className="mb-4 flex justify-between items-center">
               <div>
                 <h2 className="font-tenor text-lg">Order Details</h2>
-                <p className="text-sm text-muted-foreground">Payment: {humanizeStatus(order.payment_status || order.status)}</p>
-                <p className="text-sm text-muted-foreground">Status: {humanizeStatus(order.status)}</p>
+                {/* Payment Status */}
+                <p className="text-sm text-muted-foreground">
+                  Payment: {
+                    order.payment_status === "INITIATED" ? "Awaiting payment confirmation" :
+                    order.payment_status === "PAID" ? "✓ Order confirmed" :
+                    order.payment_status === "FAILED" ? "✗ Payment failed, retry available" :
+                    order.payment_status || "Unknown"
+                  }
+                </p>
+                {/* Order Status */}
+                <p className="text-sm text-muted-foreground">Status: {humanizeStatus(order.order_status)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
@@ -93,14 +102,13 @@ const OrderDetail = () => {
               <div>
                 <Stepper steps={["Order Placed","Payment Verification","Order Confirmed","Order Dispatched","Order Delivered"]} currentIndex={(function(){
                   const OrderStageMap: Record<string, number> = {
-                    pending_payment: 2,
-                    pending_approval: 3,
-                    processing: 3,
-                    shipped: 4,
-                    delivered: 5,
-                    cancelled: 1,
+                    PENDING: 1,
+                    CONFIRMED: 2,
+                    DISPATCHED: 3,
+                    DELIVERED: 4,
+                    CANCELLED: 0,
                   };
-                  return OrderStageMap[order.status] || 1;
+                  return OrderStageMap[order.order_status] || 0;
                 })()} />
               </div>
             </div>

@@ -152,6 +152,33 @@ export const removeWishlistItem = async (
 
 export const removeFromWishlist = removeWishlistItem;
 
+export const clearWishlist = async (userId?: string | null) => {
+  try {
+    if (!userId) {
+      localStorage.removeItem("srisha_wishlist");
+      wishlistCache = [];
+      lastWishlistFetch = 0;
+      window.dispatchEvent(new Event("wishlistUpdated"));
+      try { toast({ title: "Wishlist cleared", description: "Your wishlist is now empty." }); } catch (e) {}
+      return { success: true };
+    }
+
+    const { error } = await supabase.from("wishlists").delete().eq("user_id", userId);
+    if (error) {
+      console.error("clearWishlist error", error);
+      return { error };
+    }
+    wishlistCache = [];
+    lastWishlistFetch = 0;
+    window.dispatchEvent(new Event("wishlistUpdated"));
+    try { toast({ title: "Wishlist cleared", description: "Your wishlist is now empty." }); } catch (e) {}
+    return { success: true };
+  } catch (e) {
+    console.error("clearWishlist exception", e);
+    return { error: e };
+  }
+};
+
 export default {
   listWishlist,
   listWishlistItems,

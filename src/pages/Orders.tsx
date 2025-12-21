@@ -124,9 +124,16 @@ const OrdersPage = () => {
                 </div>
                 <div className="mb-4 flex flex-wrap gap-3 items-center">
                   <div className="flex gap-4 items-center text-sm text-muted-foreground">
-                    <span>Payment: {humanizeStatus(order.payment_status || order.status)}</span>
+                    <span>
+                      Payment: {
+                        order.payment_status === "INITIATED" ? "Awaiting confirmation" :
+                        order.payment_status === "PAID" ? "✓ Confirmed" :
+                        order.payment_status === "FAILED" ? "✗ Failed, retry available" :
+                        humanizeStatus(order.payment_status || order.order_status)
+                      }
+                    </span>
                     <span className="hidden md:inline">•</span>
-                    <span className="hidden md:inline">Status: {humanizeStatus(order.status)}</span>
+                    <span className="hidden md:inline">Status: {humanizeStatus(order.order_status)}</span>
                   </div>
                   <div className="flex-1 text-right md:text-right">
                     <Button className="text-sm" variant="link" onClick={(e)=>{e.stopPropagation(); navigate(`/orders/${order.id}`);}}>View details</Button>

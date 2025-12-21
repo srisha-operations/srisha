@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
@@ -24,21 +25,72 @@ import ProductMedia from "./pages/Admin/Products/ProductsMedia";
 // Orders
 import OrdersList from "./pages/Admin/Orders/OrdersList";
 import OrderView from "./pages/Admin/Orders/OrderView";
+import { supabase } from "@/lib/supabaseClient";
+import { clearCart } from "@/services/cart";
+import { clearWishlist } from "@/services/wishlist";
 
-// Content
-import BrandSettings from "./pages/Admin/Content/BrandSettings";
-import HeroSettings from "./pages/Admin/Content/HeroSettings";
-import GallerySettings from "./pages/Admin/Content/GallerySettings";
-import FooterSettings from "./pages/Admin/Content/FooterSettings";
-import ShopSettings from "./pages/Admin/Content/ShopSettings";
+/**
+ * AdminGuard: Logout admin users who manually navigate to customer routes
+ * Prevents admin from accessing customer site while authenticated as admin
+ * Runs on route changes to ensure global enforcement
+ */
+const AdminGuard = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
 
-// Inquiries
-// import InquiriesList from "./pages/Admin/Inquiries/InquiriesList";
-// import InquiryView from "./pages/Admin/Inquiries/InquiryView";
+  useEffect(() => {
+    let mounted = true;
+
+    const checkAdminAccess = async () => {
+      try {
+        // Get current auth session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted || !session) return;
+
+        // Check if user has admin role
+        const { data: adminRow } = await supabase
+          .from("admins")
+          .select("id, role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (!mounted) return;
+
+        // If user is admin but accessing customer routes, logout
+        const isAdminPath = location.pathname.startsWith("/admin");
+        const isAdmin = adminRow && (!adminRow.role || adminRow.role === "admin");
+
+        if (isAdmin && !isAdminPath) {
+          // Admin user on customer route - force logout
+          console.warn("Admin user accessed customer route, forcing logout");
+          
+          // Clear state
+          try { await clearCart(); } catch (e) { /* ignore */ }
+          try { await clearWishlist(); } catch (e) { /* ignore */ }
+          
+          // Logout
+          await supabase.auth.signOut();
+          
+          if (mounted) {
+            navigate("/", { replace: true });
+          }
+        }
+      } catch (err) {
+        console.error("AdminGuard check error:", err);
+      }
+    };
+
+    checkAdminAccess();
+    return () => { mounted = false; };
+  }, [location.pathname, navigate]);
+
+  return null;
+};
 
 const App = () => (
   <>
     <BrowserRouter>
+      <AdminGuard />
       <Routes>
         {/* public routes */}
         <Route path="/" element={<Index />} />
@@ -65,17 +117,6 @@ const App = () => (
           {/* Orders */}
           <Route path="orders" element={<OrdersList />} />
           <Route path="orders/:id" element={<OrderView />} />
-
-          {/* Content management */}
-          <Route path="content/brand" element={<BrandSettings />} />
-          <Route path="content/hero" element={<HeroSettings />} />
-          <Route path="content/gallery" element={<GallerySettings />} />
-          <Route path="content/footer" element={<FooterSettings />} />
-          <Route path="content/shop" element={<ShopSettings />} />
-
-          {/* Inquiries */}
-          {/* <Route path="inquiries" element={<InquiriesList />} />
-        <Route path="inquiries/:id" element={<InquiryView />} /> */}
           </Route>
         </Route>
 

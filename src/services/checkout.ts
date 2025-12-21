@@ -43,7 +43,9 @@ const generateOrderNumber = async (): Promise<string> => {
 };
 
 /**
- * Create order and order_items in a single transaction-like flow
+ * Create order and order_items in a single transaction-like flow.
+ * Sets payment_status = 'INITIATED' for backend payment processing.
+ * Frontend must call initiatePayment() to trigger payment intent creation.
  */
 export const createOrder = async (
   payload: OrderPayload,
@@ -62,7 +64,9 @@ export const createOrder = async (
       total_amount: payload.total_amount,
       is_preorder: payload.is_preorder || false,
       order_number: orderNumber,
-      status: payload.is_preorder ? "pending_approval" : "pending_payment",
+      order_status: "PENDING",
+      // For non-preorder, set initial payment state
+      payment_status: payload.is_preorder ? null : "INITIATED",
     };
 
     if (userId) insertObj.user_id = userId;
@@ -78,10 +82,14 @@ export const createOrder = async (
       console.warn("Primary order insert failed, attempting fallback:", errPrimary);
       const fallback = {
         order_number: orderNumber,
-        status: payload.is_preorder ? "pending_approval" : "pending_payment",
+        order_status: "PENDING",
         total: payload.total_amount ?? payload.total ?? 0,
       } as any;
       if (userId) fallback.user_id = userId;
+      // For non-preorder, set payment_status if the column exists in older schema
+      if (!payload.is_preorder) {
+        (fallback as any).payment_status = "INITIATED";
+      }
 
       const res2 = await supabase.from("orders").insert(fallback).select("id").single();
       if (res2.error) {

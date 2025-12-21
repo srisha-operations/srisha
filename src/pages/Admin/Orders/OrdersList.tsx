@@ -42,7 +42,7 @@ const OrdersList = () => {
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
-    const result = await updateOrderStatus(orderId, newStatus as Order["status"]);
+    const result = await updateOrderStatus(orderId, newStatus as Order["order_status"]);
     if (result.success) {
       toast({ title: "Order status updated", duration: 2000 });
       loadOrders();
@@ -70,13 +70,12 @@ const OrdersList = () => {
     });
   };
 
-  const statusColors: Record<Order["status"], string> = {
-    pending_payment: "bg-yellow-100 text-yellow-800",
-    pending_approval: "bg-blue-100 text-blue-800",
-    processing: "bg-purple-100 text-purple-800",
-    shipped: "bg-cyan-100 text-cyan-800",
-    delivered: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800",
+  const statusColors: Record<Order["order_status"], string> = {
+    PENDING: "bg-yellow-100 text-yellow-800",
+    CONFIRMED: "bg-blue-100 text-blue-800",
+    DISPATCHED: "bg-cyan-100 text-cyan-800",
+    DELIVERED: "bg-green-100 text-green-800",
+    CANCELLED: "bg-red-100 text-red-800",
   };
 
   const pageCount = Math.ceil(totalOrders / pageSize);
@@ -157,20 +156,19 @@ const OrdersList = () => {
                       {formatPrice(order.total_amount || order.total || 0)}
                     </TableCell>
                     <TableCell>
-                      <Select value={order.status ?? "pending_payment"} onValueChange={(val) => handleStatusChange(order.id, val)}>
-                        <SelectTrigger className={`w-40 text-xs font-lato ${statusColors[order.status] || ""}`}>
+                      <Select value={order.order_status ?? "PENDING"} onValueChange={(val) => handleStatusChange(order.id, val)}>
+                        <SelectTrigger className={`w-40 text-xs font-lato ${statusColors[order.order_status] || ""}`}>
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pending_payment">Pending Payment</SelectItem>
-                          <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                          <SelectItem value="processing">Processing</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="PENDING">Pending</SelectItem>
+                          <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                          <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                          <SelectItem value="DELIVERED">Delivered</SelectItem>
+                          <SelectItem value="CANCELLED">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
-                      <span className="ml-2 text-xs text-muted-foreground">{humanizeStatus(order.status)}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{humanizeStatus(order.order_status)}</span>
                     </TableCell>
                     <TableCell className="font-lato text-sm">{formatDate(order.created_at)}</TableCell>
                     <TableCell className="text-right space-x-2">
