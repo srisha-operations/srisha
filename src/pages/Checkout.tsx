@@ -207,6 +207,8 @@ const Checkout = () => {
         metadata: { size: item.cartMeta?.size || null },
       }));
 
+      // Phase 1: Async operations (backend calls)
+      // These break the user gesture, but we complete all of them first
       const result = await createOrder(
         {
           customer_name: shipping.name,
@@ -244,20 +246,21 @@ const Checkout = () => {
 
       console.log("Payment initiation response:", paymentResult);
 
-      // Open Razorpay Checkout modal with order details from backend
+      // Phase 2: Synchronous Razorpay modal opening
+      // This MUST happen immediately without any awaits or state updates
+      // to preserve the user gesture and allow the modal to open
       if (paymentResult.razorpayOrderId && paymentResult.razorpayKeyId) {
         // Defensive check: ensure Razorpay script is loaded
         const RazorpayClass = (window as any).Razorpay;
         if (!RazorpayClass) {
           console.error("Razorpay script not loaded. Window.Razorpay is undefined.");
           console.error("Checked at:", new Date().toISOString());
-          console.error("window object keys related to Razorpay:", 
-            Object.keys(window).filter(key => key.toLowerCase().includes('razor')));
           toast({
             title: "Payment gateway error",
             description: "Razorpay is not available. Please reload and try again.",
             duration: 4000,
           });
+          setIsSubmitting(false);
           navigate(`/orders/${result.orderId}`);
           return;
         }
@@ -280,7 +283,7 @@ const Checkout = () => {
             theme: {
               color: "#000000", // SRISHA brand color
             },
-            // Callback handlers
+            // Callback handlers - ALL navigation happens here, not before
             handler: function (response: any) {
               // This is called after successful payment
               console.log("Payment successful. Razorpay response:", response);
@@ -289,6 +292,7 @@ const Checkout = () => {
                 description: "Your order has been confirmed.",
                 duration: 4000,
               });
+              setIsSubmitting(false);
               navigate(`/orders/${result.orderId}`);
             },
           };
@@ -308,29 +312,33 @@ const Checkout = () => {
               duration: 4000,
             });
             // Navigate to order page - order still exists
+            setIsSubmitting(false);
             navigate(`/orders/${result.orderId}`);
           });
 
           // Handle modal dismissal (user closes without paying)
           checkout.on("payment.dismiss", function () {
             console.log("Payment modal dismissed by user");
-            // Poll to check if payment actually went through
-            setTimeout(() => {
-              console.log("Checking payment status after modal close...");
-            }, 500);
             toast({
               title: "Payment cancelled",
               description: "You can complete payment later from your orders.",
               duration: 4000,
             });
             // Navigate to order page - order still exists
+            setIsSubmitting(false);
             navigate(`/orders/${result.orderId}`);
           });
 
           console.log("About to call checkout.open()...");
-          // Open the checkout modal - MUST happen before any navigation
+          // CRITICAL: checkout.open() must be called synchronously here
+          // in the same execution context as the user gesture
+          // NO awaits, NO state updates, NO navigation before this point
           checkout.open();
           console.log("checkout.open() called successfully");
+          
+          // NOTE: Do NOT set setIsSubmitting(false) here
+          // Keep it true until a callback fires (handler, payment.failed, payment.dismiss)
+          // Those callbacks will reset it when they navigate
         } catch (error) {
           console.error("Error creating/opening Razorpay checkout:", error);
           console.error("Error stack:", (error as any).stack);
@@ -339,6 +347,7 @@ const Checkout = () => {
             description: "Failed to open payment modal. Please try again.",
             duration: 4000,
           });
+          setIsSubmitting(false);
           navigate(`/orders/${result.orderId}`);
         }
       } else {
@@ -350,12 +359,12 @@ const Checkout = () => {
           description: `Order #${result.orderNumber} is ready. Waiting for payment confirmation...`,
           duration: 4000,
         });
+        setIsSubmitting(false);
         navigate(`/orders/${result.orderId}`);
       }
     } catch (e) {
       console.error("Order creation failed:", e);
       toast({ title: "Failed to create order", description: (e as any).message || "Please try again." });
-    } finally {
       setIsSubmitting(false);
     }
   };
