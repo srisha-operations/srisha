@@ -78,12 +78,12 @@ export const createOrder = async (
       if (res.error) throw res.error;
       orderData = res.data;
     } catch (errPrimary) {
-      // Primary insert failed — attempt fallback to older schema (uses 'total' column and user_id)
+      // Primary insert failed — attempt fallback with total_amount
       console.warn("Primary order insert failed, attempting fallback:", errPrimary);
       const fallback = {
         order_number: orderNumber,
         order_status: "PENDING",
-        total: payload.total_amount ?? payload.total ?? 0,
+        total_amount: payload.total_amount ?? 0,
       } as any;
       if (userId) fallback.user_id = userId;
       // For non-preorder, set payment_status if the column exists in older schema

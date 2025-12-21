@@ -33,6 +33,9 @@ export interface PaymentInitiationResponse {
   nextAction?: "redirect" | "modal" | "poll"; // How frontend should handle next step
   redirectUrl?: string; // If gateway requires redirect (e.g., hosted checkout)
   message?: string; // User-facing message
+  // Razorpay-specific (safe to return)
+  razorpayOrderId?: string; // Razorpay order ID
+  razorpayKeyId?: string; // Public key from Razorpay
 }
 
 /**
