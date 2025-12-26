@@ -36,6 +36,7 @@ export interface PaymentInitiationResponse {
   // Razorpay-specific (safe to return)
   razorpayOrderId?: string; // Razorpay order ID
   razorpayKeyId?: string; // Public key from Razorpay
+  keyId?: string; // Alternative name for key id (used in some envs)
 }
 
 /**

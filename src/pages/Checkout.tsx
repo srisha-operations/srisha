@@ -249,7 +249,11 @@ const Checkout = () => {
       // Phase 2: Synchronous Razorpay modal opening
       // This MUST happen immediately without any awaits or state updates
       // to preserve the user gesture and allow the modal to open
-      if (paymentResult.razorpayOrderId && paymentResult.razorpayKeyId) {
+      
+      // Robustness fix: Backend might return 'razorpayKeyId' or just 'keyId' depending on version
+      const keyId = paymentResult.razorpayKeyId || (paymentResult as any).keyId;
+
+      if (paymentResult.razorpayOrderId && keyId) {
         // Defensive check: ensure Razorpay script is loaded
         const RazorpayClass = (window as any).Razorpay;
         if (!RazorpayClass) {
@@ -268,7 +272,7 @@ const Checkout = () => {
         try {
           // Razorpay checkout options
           const options = {
-            key: paymentResult.razorpayKeyId,
+            key: keyId,
             amount: total * 100, // Amount in paise
             currency: "INR",
             name: "SRISHA",
