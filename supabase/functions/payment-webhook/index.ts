@@ -62,14 +62,53 @@ const corsHeaders = {
  */
 async function verifyWebhookSignature(
   gateway: string,
-  payload: any,
+  rawBody: string,
   headers: Headers,
   secret: string
 ): Promise<boolean> {
-  // TODO: Implement real signature verification based on gateway
-  // For now, always return true (stub)
-  console.log(`Stub: Would verify ${gateway} webhook signature`);
-  return true;
+  if (gateway !== "razorpay") {
+    // For other gateways, we still defer implementation or assume true for now if not configured
+    console.log(`Signature verification for ${gateway} not yet implemented`);
+    return true; 
+  }
+
+  const signature = headers.get("x-razorpay-signature");
+  if (!signature) {
+    console.error("Missing x-razorpay-signature header");
+    return false;
+  }
+
+  try {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    
+    const key = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const signed = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(rawBody)
+    );
+
+    const calculatedSignature = Array.from(new Uint8Array(signed))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    const isValid = calculatedSignature === signature;
+    if (!isValid) {
+      console.error(`Signature mismatch. Calc: ${calculatedSignature}, Recv: ${signature}`);
+    }
+    return isValid;
+  } catch (err) {
+    console.error("Crypto error during signature verification:", err);
+    return false;
+  }
 }
 
 /**
@@ -89,14 +128,16 @@ function parseWebhookPayload(gateway: string, payload: any): WebhookData {
   switch (gateway) {
     case "razorpay":
       return {
-        paymentStatus: payload.event?.includes("payment.authorized")
-          ? "PAID"
+        paymentStatus: payload.event?.includes("payment.authorized") || payload.event?.includes("order.paid")
+          ? "PAID" // Razorpay "captured" or authorized usually means success for us if auto-capture is on
           : payload.event?.includes("payment.failed")
           ? "FAILED"
           : "UNKNOWN",
-        paymentReference: payload.payload?.order?.entity?.receipt,
-        amount: payload.payload?.order?.entity?.amount
-          ? payload.payload.order.entity.amount / 100
+        paymentReference: payload.payload?.payment?.entity?.order_id || payload.payload?.order?.entity?.id,
+        // Fallback: try different fields typically present in Razorpay webhooks
+        // usually payload.payload.payment.entity.order_id links back to our intent
+        amount: payload.payload?.payment?.entity?.amount
+          ? payload.payload.payment.entity.amount / 100
           : undefined,
       };
 
@@ -136,33 +177,53 @@ serve(async (req) => {
   }
 
   try {
-    const gateway = Deno.env.get("PAYMENT_GATEWAY") || "stubbed";
-    const webhookSecret = Deno.env.get("WEBHOOK_SECRET") || "";
+    const gateway = Deno.env.get("PAYMENT_GATEWAY") || "razorpay"; // Default to razorpay if not set
+    const webhookSecret = Deno.env.get("WEBHOOK_SECRET");
+
+    if (!webhookSecret) {
+      console.error("WEBHOOK_SECRET is not set");
+      return new Response(JSON.stringify({ error: "Configuration error" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
     // Parse webhook payload
-    const payload = await req.json();
+    // IMPORTANT: Read raw text first for signature verification
+    const rawBody = await req.text();
+    let payload;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (e) {
+       return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
-    // TODO: Implement real signature verification based on gateway
-    // const isValid = await verifyWebhookSignature(
-    //   gateway,
-    //   payload,
-    //   req.headers,
-    //   webhookSecret
-    // );
-    // if (!isValid) {
-    //   console.error("Webhook signature verification failed");
-    //   return new Response(JSON.stringify({ error: "Signature verification failed" }), {
-    //     status: 403,
-    //     headers: { "Content-Type": "application/json", ...corsHeaders },
-    //   });
-    // }
+    // Verify signature
+    const isValid = await verifyWebhookSignature(
+      gateway,
+      rawBody,
+      req.headers,
+      webhookSecret
+    );
+
+    if (!isValid) {
+      console.error("Webhook signature verification failed");
+      return new Response(JSON.stringify({ error: "Signature verification failed" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
     // Parse webhook data based on gateway
     const webhookData = parseWebhookPayload(gateway, payload);
 
     if (!webhookData.paymentReference) {
       console.warn("Webhook received but could not extract payment reference");
-      return new Response(JSON.stringify({ status: "acknowledged" }), {
+      // console.log("Payload:", JSON.stringify(payload)); 
+      return new Response(JSON.stringify({ status: "acknowledged", warning: "no_reference" }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
@@ -175,6 +236,7 @@ serve(async (req) => {
     );
 
     // Find order by payment_reference
+    // For Razorpay, payment_reference in our DB is the razorpay_order_id (e.g. order_DaZ...)
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("id, order_number, payment_status")
@@ -184,7 +246,7 @@ serve(async (req) => {
     if (orderError || !order) {
       console.warn(`Order not found for payment reference: ${webhookData.paymentReference}`);
       // Still acknowledge the webhook (idempotent)
-      return new Response(JSON.stringify({ status: "acknowledged" }), {
+      return new Response(JSON.stringify({ status: "acknowledged", warning: "order_not_found" }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
@@ -201,9 +263,17 @@ serve(async (req) => {
 
     // Update order based on webhook status
     // Note: order_status only allows: PENDING | CONFIRMED | DISPATCHED | DELIVERED | CANCELLED
-    // So failed payments map to CANCELLED, not FAILED
+    // So failed payments map to CANCELLED, not FAILED status, but payment_status is FAILED
     const newOrderStatus =
       webhookData.paymentStatus === "PAID" ? "CONFIRMED" : "CANCELLED";
+    
+    // Only update if we have a definitive status
+    if (webhookData.paymentStatus === "UNKNOWN") {
+       return new Response(JSON.stringify({ status: "acknowledged", info: "unknown_status" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
     const { error: updateError } = await supabase
       .from("orders")
