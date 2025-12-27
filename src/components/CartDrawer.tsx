@@ -1,5 +1,6 @@
 // src/components/CartDrawer.tsx
 import { useEffect, useState } from "react";
+import { Loader } from "./ui/loader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { AspectRatio } from "./ui/aspect-ratio";
 import { Button } from "./ui/button";
@@ -17,6 +18,7 @@ interface Props {
 
 const CartDrawer = ({ open, onOpenChange }: Props) => {
   const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"normal" | "inquiry">("normal");
   const { toast } = useToast();
 
@@ -33,13 +35,19 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
       const pids = local.map((l: any) => l.product_id);
       const { data } = await supabase
         .from("products")
-        .select("*, product_images(*)")
+        .select("*, product_images(*), product_variants(*)")
         .in("id", pids);
       // attach qty & local ids
-      const filled = data.map((p: any) => ({
-        ...p,
-        quantity: local.find((l: any) => l.product_id === p.id)?.quantity || 1,
-      }));
+      // Fix: Map over LOCAL items, not products, to support multiple variants of same product
+      const filled = local.map((l: any) => {
+        const p = data?.find((d: any) => d.id === l.product_id);
+        if (!p) return null;
+        return {
+          ...p,
+          cartMeta: l, // Unify structure with logged-in flow
+          quantity: l.quantity || 1, // keeping top-level quantity for compat if needed, but better to use cartMeta
+        };
+      }).filter(Boolean);
       setItems(filled);
       return;
     }
@@ -52,7 +60,7 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
     const pids = cart.map((c: any) => c.product_id);
     const { data } = await supabase
       .from("products")
-      .select("*, product_images(*)")
+      .select("*, product_images(*), product_variants(*)")
       .in("id", pids);
     // join
     const filled = cart.map((c: any) => {
@@ -60,6 +68,7 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
       return { ...prod, cartMeta: c };
     });
     setItems(filled);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -146,7 +155,9 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
           </SheetTitle>
         </SheetHeader>
 
-        {!items.length ? (
+        {loading ? (
+           <Loader />
+        ) : !items.length ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="font-lato text-muted-foreground mb-4">
               Your cart is empty
@@ -183,6 +194,15 @@ const CartDrawer = ({ open, onOpenChange }: Props) => {
                     {p.name}
                   </h4>
                   <p className="text-base text-muted-foreground">₹{p.price}</p>
+                  {(() => {
+                     // resolve size
+                     const vid = p.cartMeta?.variant_id;
+                     const v = p.product_variants?.find((x: any) => x.id === vid);
+                     if (v && v.size) {
+                       return <p className="text-sm text-muted-foreground mt-0.5">Size: {v.size}</p>;
+                     }
+                     return null;
+                  })()}
                 </div>
                 <div className="flex-shrink-0 pt-1">
                   <Button

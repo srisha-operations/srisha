@@ -4,7 +4,9 @@ import { clearCart } from "@/services/cart";
 import { clearWishlist } from "@/services/wishlist";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const AdminSignin = () => {
   const [email, setEmail] = useState("");
@@ -21,6 +23,20 @@ const AdminSignin = () => {
     try { localStorage.removeItem('srisha_cart'); } catch (e) {}
     try { localStorage.removeItem('srisha_wishlist'); } catch (e) {}
 
+    // Validation
+    if (!email.includes("@") || !email.includes(".")) {
+      const msg = "Please enter a valid email address.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (password.length < 6) {
+      const msg = "Password must be at least 6 characters.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
     // Login via Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -28,7 +44,12 @@ const AdminSignin = () => {
     });
 
     if (error) {
-      setError("Invalid credentials.");
+      let msg = error.message;
+      if (msg.includes("Invalid login")) {
+        msg = "Invalid email or password.";
+      }
+      setError(msg);
+      toast.error(msg);
       return;
     }
 

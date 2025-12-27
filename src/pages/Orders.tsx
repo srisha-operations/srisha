@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Loader } from "@/components/ui/loader";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
@@ -56,7 +57,7 @@ const OrdersPage = () => {
     return () => { mounted = false; };
   }, []);
 
-  if (loading) return <div className="pt-24">Loading...</div>;
+  if (loading) return <Loader fullScreen />;
 
   return (
     <div className="w-full min-h-screen bg-background">
@@ -125,17 +126,25 @@ const OrdersPage = () => {
                 <div className="mb-4 flex flex-wrap gap-3 items-center">
                   <div className="flex gap-4 items-center text-sm text-muted-foreground">
                     <span>
-                      Payment: {
-                        order.payment_status === "INITIATED" ? "Awaiting confirmation" :
-                        order.payment_status === "PAID" ? "✓ Confirmed" :
-                        order.payment_status === "FAILED" ? "✗ Failed, retry available" :
-                        humanizeStatus(order.payment_status || order.order_status)
-                      }
+                      Payment: <span className={
+                        order.payment_status === "PAID" ? "text-green-600 font-medium" :
+                        order.payment_status === "FAILED" ? "text-red-600 font-medium" :
+                        "text-amber-600 font-medium"
+                      }>
+                        {
+                          order.payment_status === "INITIATED" ? "Pending" :
+                          order.payment_status === "PAID" ? "Completed" :
+                          order.payment_status === "FAILED" ? "Failed" :
+                          humanizeStatus(order.payment_status || order.order_status)
+                        }
+                      </span>
                     </span>
                     <span className="hidden md:inline">•</span>
                     <span className="hidden md:inline">Status: {humanizeStatus(order.order_status)}</span>
                   </div>
-                  <div className="flex-1 text-right md:text-right">
+                  <div className="flex-1 flex justify-end gap-3 items-center">
+                     {/* Quick Pay Now Button */}
+                     {/* Quick Pay Now Button removed - use details page */}
                     <Button className="text-sm" variant="link" onClick={(e)=>{e.stopPropagation(); navigate(`/orders/${order.id}`);}}>View details</Button>
                   </div>
                 </div>

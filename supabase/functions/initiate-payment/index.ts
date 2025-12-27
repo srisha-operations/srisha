@@ -113,7 +113,7 @@ serve(async (req) => {
     // Fetch the order to verify it exists
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, status, payment_status, total_amount")
+      .select("id, order_status, payment_status, total_amount")
       .eq("id", orderId)
       .single();
 
@@ -125,7 +125,7 @@ serve(async (req) => {
           paymentStatus: "PENDING",
           orderId,
           orderNumber,
-          error: "Order not found",
+          error: `Order not found in DB. Searched for ID: ${orderId}. DB Error: ${orderError?.message || "None"}`,
         }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -133,6 +133,20 @@ serve(async (req) => {
 
     // Verify order status is PENDING (from frontend createOrder)
     if (order.order_status !== "PENDING") {
+      // If already PAID, return success immediately
+      if (order.payment_status === "PAID") {
+         return new Response(
+          JSON.stringify({
+            success: true,
+            paymentStatus: "PAID",
+            orderId,
+            orderNumber,
+            message: "Payment already completed",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({
           success: false,
@@ -144,8 +158,8 @@ serve(async (req) => {
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    // Create Razorpay order
+    
+    // Check if we already have a Razorpay order for this
     const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID");
     const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
 
@@ -160,6 +174,73 @@ serve(async (req) => {
           error: "Payment gateway not configured",
         }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const authString = `${razorpayKeyId}:${razorpayKeySecret}`;
+    const encodedAuth = btoa(authString);
+
+    // Self-Healing Phase: Check existing Razorpay order status
+    let existingRazorpayOrder = null;
+    if (order.payment_reference && order.payment_reference.startsWith("order_")) {
+       try {
+         const verifyResp = await fetch(`https://api.razorpay.com/v1/orders/${order.payment_reference}`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Basic ${encodedAuth}`,
+            },
+         });
+         
+         if (verifyResp.ok) {
+           const rzpOrder = await verifyResp.json();
+           
+           // If Razorpay says it's paid, update our DB immediately
+           if (rzpOrder.status === "paid") {
+              await supabase
+                .from("orders")
+                .update({ payment_status: "PAID", order_status: "CONFIRMED" }) // Auto-confirm
+                .eq("id", orderId);
+              
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  paymentStatus: "PAID",
+                  orderId,
+                  orderNumber,
+                  message: "Payment verified as completed",
+                }),
+                { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+              );
+           }
+           
+           // If unpaid, we can reuse this order ID if amount matches
+           // (Simple check: reuse if exists)
+           if (rzpOrder.status === "created" || rzpOrder.status === "attempted") {
+             existingRazorpayOrder = rzpOrder;
+           }
+         }
+       } catch (verifyIndicatedError) {
+         console.warn("Failed to verify existing razorpay order", verifyIndicatedError);
+         // Continue to create new order if verification fails
+       }
+    }
+
+    // Reuse existing if found
+    if (existingRazorpayOrder) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          paymentStatus: "INITIATED",
+          orderId,
+          orderNumber,
+          paymentReference: existingRazorpayOrder.id,
+          paymentGateway: "razorpay",
+          nextAction: "modal",
+          razorpayOrderId: existingRazorpayOrder.id,
+          razorpayKeyId: razorpayKeyId,
+          message: "Resuming existing checkout...",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 

@@ -14,8 +14,13 @@ import {
   ShoppingCart
 } from "lucide-react";
 
+import { useState } from "react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+
 const AdminLayout = () => {
   const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
   
   const handleLogout = async () => {
     try {
@@ -33,10 +38,8 @@ const AdminLayout = () => {
     navigate('/admin/signin', { replace: true });
   };
 
-  return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-72 border-r border-border bg-slate-50 flex flex-col">
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
         {/* Header */}
         <div className="p-6 border-b border-border bg-white">
           <h2 className="font-tenor text-2xl tracking-wider text-foreground">SRISHA</h2>
@@ -53,6 +56,8 @@ const AdminLayout = () => {
             
             <NavLink
               to="/admin"
+              end
+              onClick={() => setIsOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg font-lato text-sm transition-colors ${
                   isActive
@@ -74,6 +79,7 @@ const AdminLayout = () => {
 
             <NavLink
               to="/admin/products"
+              onClick={() => setIsOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg font-lato text-sm transition-colors ${
                   isActive
@@ -95,6 +101,7 @@ const AdminLayout = () => {
 
             <NavLink
               to="/admin/orders"
+              onClick={() => setIsOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg font-lato text-sm transition-colors ${
                   isActive
@@ -110,7 +117,7 @@ const AdminLayout = () => {
         </nav>
 
         {/* Footer with Logout */}
-        <div className="border-t border-border p-4 bg-white">
+        <div className="border-t border-border p-4 bg-white mt-auto">
           <Button
             className="w-full font-tenor flex items-center justify-center gap-2"
             variant="outline"
@@ -120,11 +127,34 @@ const AdminLayout = () => {
             Logout
           </Button>
         </div>
+    </div>
+  );
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-72 border-r border-border bg-slate-50 flex-col">
+        <SidebarContent />
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-8 bg-gradient-to-br from-background to-slate-50 min-h-screen">
+      <main className="flex-1 w-full flex flex-col min-h-screen">
+        {/* Mobile Header */}
+        <div className="md:hidden border-b border-border bg-white p-4 flex items-center justify-between sticky top-0 z-30">
+            <span className="font-tenor text-lg tracking-wider">SRISHA ADMIN</span>
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                        <Menu className="w-6 h-6" />
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-72">
+                    <SidebarContent />
+                </SheetContent>
+            </Sheet>
+        </div>
+
+        <div className="flex-1 p-4 md:p-8 bg-gradient-to-br from-background to-slate-50 overflow-auto">
           <Outlet />
         </div>
       </main>

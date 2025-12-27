@@ -56,36 +56,113 @@ export const initiatePayment = async (
     // 2. Update orders.payment_status = 'INITIATED'
     // 3. Update orders.payment_reference with gateway reference
     // 4. Return only safe data (no credentials, no gateway secrets)
-    const { data, error } = await supabase.functions.invoke("initiate-payment", {
-      body: payload,
-    });
+    // Use direct fetch to bypass potential library issues
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    let response;
+    let data;
+    let attempt = 0;
+    const maxRetries = 6; // Increased to 6 (~15s total wait) to handle slow cold starts/replication
 
-    if (error) {
-      console.warn("Payment initiation warning (may be CORS during setup):", error);
-      // If order was already created, treat as success and let webhook handle final confirmation
-      // This gracefully handles CORS failures during edge function setup phase
-      return {
-        success: true,
-        paymentStatus: "INITIATED",
-        orderId: payload.orderId,
-        orderNumber: payload.orderNumber,
-        message: "Payment initiated. Awaiting confirmation.",
-      };
+    while (attempt < maxRetries) {
+      try {
+        response = await fetch(`${supabaseUrl}/functions/v1/initiate-payment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        data = await response.json();
+
+        if (response.ok) {
+           break; // Success!
+        }
+        
+        // If 404 (Order not found), wait and retry (DB sync delay)
+        if (response.status === 404) {
+           console.warn(`Attempt ${attempt+1}/${maxRetries}: Order not found yet. Retrying in 2.5s...`);
+           await new Promise(r => setTimeout(r, 2500)); 
+           attempt++;
+           continue;
+        }
+
+        // Other errors, throw immediately
+        throw new Error(data.error || `Server returned ${response.status}`);
+      } catch (err) {
+         if (attempt === maxRetries - 1) throw err;
+         console.warn(`Payment init retry ${attempt+1} failed:`, err);
+         await new Promise(r => setTimeout(r, 1000));
+         attempt++;
+      }
+    }
+
+    if (!response || !response.ok) {
+       console.error("Direct fetch failed after retries:", data);
+       throw new Error(data?.error || "Payment initialization failed");
     }
 
     // Return the safe response from the Edge Function
     return data as PaymentInitiationResponse;
   } catch (e) {
-    // CORS failures and network errors are caught here
-    // Log as warning, not error - order was already created
-    console.warn("Payment initiation warning (likely CORS setup phase):", (e as any).message);
+    console.error("Payment initiation exception:", e);
     return {
-      success: true,
+      success: false,
       paymentStatus: "INITIATED",
       orderId: payload.orderId,
       orderNumber: payload.orderNumber,
-      message: "Payment initiated. Awaiting confirmation.",
+      error: "Network error occurred. Please check your connection.",
     };
+  }
+};
+
+/**
+ * Verify payment signature on the server.
+ * This is the critical step to ensure the payment is genuine and update the DB instantly.
+ */
+export const verifyPayment = async (
+  razorpay_payment_id: string,
+  razorpay_order_id: string,
+  razorpay_signature: string,
+  orderId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/verify-payment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${anonKey}`,
+        "apikey": anonKey,
+      },
+      body: JSON.stringify({
+        razorpay_payment_id,
+        razorpay_order_id,
+        razorpay_signature,
+        orderId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Verification failed from server:", {
+        status: response.status,
+        statusText: response.statusText,
+        error: data
+      });
+      return { success: false, error: data.error || `Server Error: ${response.status} ${response.statusText}` };
+    }
+
+    return { success: true };
+  } catch (e) {
+    console.error("verifyPayment Exception:", e);
+    return { success: false, error: "Network/CORS error or Server Unreachable" };
   }
 };
 

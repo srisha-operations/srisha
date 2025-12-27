@@ -6,7 +6,7 @@ import { AspectRatio } from "./ui/aspect-ratio";
 import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
 import { addToCart } from "@/services/cart";
 import { getCurrentUser } from "@/services/auth";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { formatPrice } from "@/lib/utils";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -38,6 +38,7 @@ interface Props {
   primaryActionLabel?: string;
   primaryActionHandler?: (e?: any) => void;
   showWhatsApp?: boolean;
+  disableActionSuccessAnimation?: boolean;
 }
 
 const ProductCard = ({
@@ -48,6 +49,7 @@ const ProductCard = ({
   primaryActionLabel,
   primaryActionHandler,
   showWhatsApp = true,
+  disableActionSuccessAnimation = false,
 }: Props) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -120,7 +122,7 @@ const ProductCard = ({
       // Revert optimistic update
       setIsWishlisted(prev);
       console.error("wishlist toggle failed", err);
-      toast({ title: "Could not update wishlist", description: "Please try again." });
+      toast.error("Could not update wishlist", { description: "Please try again." });
     }
   };
 
@@ -223,18 +225,26 @@ const ProductCard = ({
         </div>
 
         <Button
-          onClick={primaryActionHandler ? async () => {
-            setIsAddingToCart(true);
-            setCartAdded(true);
-            await primaryActionHandler?.();
-            setTimeout(() => {
-              setIsAddingToCart(false);
-              setCartAdded(false);
-            }, 500);
-          } : handleInquire}
+          onClick={async (e) => {
+            if (primaryActionHandler) {
+              if (!disableActionSuccessAnimation) {
+                setIsAddingToCart(true);
+                setCartAdded(true);
+              }
+              await primaryActionHandler();
+              if (!disableActionSuccessAnimation) {
+                setTimeout(() => {
+                  setIsAddingToCart(false);
+                  setCartAdded(false);
+                }, 500);
+              }
+            } else {
+              handleInquire();
+            }
+          }}
           variant="outline"
           className={`w-full gap-2 hover:bg-secondary transition-all duration-220 ${
-            isAddingToCart ? "scale-108" : "scale-100"
+            isAddingToCart ? "scale-105" : "scale-100"
           } ${cartAdded ? "bg-green-50" : ""}`}
           aria-live="polite"
         >
@@ -244,7 +254,7 @@ const ProductCard = ({
               Added
             </>
           ) : (
-            primaryActionLabel ? primaryActionLabel : (showWhatsApp ? <><WhatsAppIcon className="w-4 h-4" /> Inquire</> : "ADD TO CART")
+            primaryActionLabel || (showWhatsApp ? <><WhatsAppIcon className="w-4 h-4" /> Inquire</> : "ADD TO CART")
           )}
         </Button>
       </div>

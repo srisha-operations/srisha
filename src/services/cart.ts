@@ -1,6 +1,6 @@
 // src/services/cart.ts
 import { supabase } from "@/lib/supabaseClient";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const LOCAL_KEY = "srisha_cart";
 
@@ -79,7 +79,7 @@ export const addToCart = async (payload: { product_id: string; variant_id?: stri
       }
     } catch (e) {}
     window.dispatchEvent(new Event("cartUpdated"));
-    try { toast({ title: "Added to cart", description: "Item added to your cart." }); } catch (e) {}
+    try { toast.success("Added to cart", { description: "Item added to your cart." }); } catch (e) {}
     return { success: true };
   }
 
@@ -110,7 +110,7 @@ export const addToCart = async (payload: { product_id: string; variant_id?: stri
   } catch (e) {}
 
   window.dispatchEvent(new Event("cartUpdated"));
-  try { toast({ title: "Added to cart", description: "Item added to your cart." }); } catch (e) {}
+  try { toast.success("Added to cart", { description: "Item added to your cart." }); } catch (e) {}
   return { success: true };
 };
 
@@ -124,7 +124,7 @@ export const updateCartQuantity = async (id: string, quantity: number, userId?: 
       localStorage.setItem(LOCAL_KEY, JSON.stringify(arr));
       try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = arr; cache.lastFetch = 0; } } catch(e){}
       window.dispatchEvent(new Event("cartUpdated"));
-      try { toast({ title: "Cart updated", description: "Item quantity updated." }); } catch (e) {}
+      try { toast.success("Cart updated", { description: "Item quantity updated." }); } catch (e) {}
     }
     return { success: true };
   }
@@ -136,7 +136,7 @@ export const updateCartQuantity = async (id: string, quantity: number, userId?: 
   }
   try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
   window.dispatchEvent(new Event("cartUpdated"));
-  try { toast({ title: "Cart updated", description: "Item quantity updated." }); } catch (e) {}
+  try { toast.success("Cart updated", { description: "Item quantity updated." }); } catch (e) {}
   return { success: true };
 };
 
@@ -148,7 +148,7 @@ export const removeFromCart = async (idOrProductId: string, userId?: string) => 
     localStorage.setItem(LOCAL_KEY, JSON.stringify(filtered));
     try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = filtered; cache.lastFetch = 0; } } catch(e){}
     window.dispatchEvent(new Event("cartUpdated"));
-    try { toast({ title: "Removed from cart", description: "Item removed from your cart." }); } catch (e) {}
+    try { toast.success("Removed from cart", { description: "Item removed from your cart." }); } catch (e) {}
     return { success: true };
   }
 
@@ -159,7 +159,7 @@ export const removeFromCart = async (idOrProductId: string, userId?: string) => 
   }
   try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
   window.dispatchEvent(new Event("cartUpdated"));
-  try { toast({ title: "Removed from cart", description: "Item removed from your cart." }); } catch (e) {}
+  try { toast.success("Removed from cart", { description: "Item removed from your cart." }); } catch (e) {}
   return { success: true };
 };
 
@@ -185,7 +185,7 @@ export const submitPreorder = async (userId: string, itemIds?: string[]) => {
   // optional: return updated rows by selecting
   try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
   window.dispatchEvent(new Event("cartUpdated"));
-  try { toast({ title: "Preorder submitted", description: "The store will contact you soon." }); } catch (e) {}
+  try { toast.success("Preorder submitted", { description: "The store will contact you soon." }); } catch (e) {}
   return { success: true };
 };
 
@@ -211,7 +211,7 @@ export const mergeLocalCartToRemote = async (userId: string) => {
   localStorage.removeItem(LOCAL_KEY);
   try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
   window.dispatchEvent(new Event("cartUpdated"));
-  try { toast({ title: "Cart merged", description: "Local cart merged to your account." }); } catch (e) {}
+  try { toast.success("Cart merged", { description: "Local cart merged to your account." }); } catch (e) {}
 };
 
 export const clearCart = async (userId?: string | null) => {
@@ -220,7 +220,7 @@ export const clearCart = async (userId?: string | null) => {
       localStorage.removeItem(LOCAL_KEY);
       try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
       window.dispatchEvent(new Event("cartUpdated"));
-      try { toast({ title: "Cart cleared", description: "Your cart is now empty." }); } catch (e){}
+      try { toast.success("Cart cleared", { description: "Your cart is now empty." }); } catch (e){}
       return { success: true };
     }
 
@@ -231,7 +231,7 @@ export const clearCart = async (userId?: string | null) => {
     }
     try { const cache = (globalThis as any).__srisha_cart_cache; if (cache) { cache.data = null; cache.lastFetch = 0; } } catch(e){}
     window.dispatchEvent(new Event("cartUpdated"));
-    try { toast({ title: "Cart cleared", description: "Your cart is now empty." }); } catch (e){}
+    try { toast.success("Cart cleared", { description: "Your cart is now empty." }); } catch (e){}
     return { success: true };
   } catch (e) {
     console.error("clearCart exception", e);

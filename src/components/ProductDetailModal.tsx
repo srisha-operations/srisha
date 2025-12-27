@@ -1,6 +1,6 @@
 // src/components/ProductDetailModal.tsx
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Heart, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
@@ -8,7 +8,7 @@ import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wish
 import { addToCart, submitPreorder } from "@/services/cart";
 import { getProductById } from "@/services/products";
 import { getCurrentUser } from "@/services/auth";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -89,7 +89,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
       } catch (err) {
         setIsWishlisted(prev);
         console.error("guest wishlist toggle failed", err);
-        toast({ title: "Could not update wishlist", description: "Please try again." });
+        toast.error("Could not update wishlist", { description: "Please try again." });
       }
       return;
     }
@@ -106,7 +106,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     } catch (err) {
       setIsWishlisted(prev);
       console.error("wishlist toggle failed", err);
-      toast({ title: "Could not update wishlist", description: "Please try again." });
+      toast.error("Could not update wishlist", { description: "Please try again." });
     }
   };
 
@@ -123,13 +123,13 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     if (hasVariants) {
       const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
       if (!v) {
-        toast({ title: 'Please select an available size' });
+        toast.warning('Please select an available size');
         setIsAddingToCart(false);
         setCartAdded(false);
         return;
       }
       if (v.stock === 0) {
-        toast({ title: 'Selected size out of stock' });
+        toast.error('Selected size out of stock');
         setIsAddingToCart(false);
         setCartAdded(false);
         return;
@@ -179,16 +179,16 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
     if (hasVariants) {
       if (!selectedSize) {
-        toast({ title: 'Please select a size' });
+        toast.warning('Please select a size');
         return;
       }
       const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
       if (!v) {
-        toast({ title: 'Selected size unavailable' });
+        toast.error('Selected size unavailable');
         return;
       }
       if (v.stock === 0) {
-        toast({ title: 'Selected size out of stock' });
+        toast.error('Selected size out of stock');
         return;
       }
     }
@@ -198,7 +198,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
       // add the item if not already in cart, then submit preorder for that product
       await addToCart({ product_id: resolvedProduct.id, variant_id: hasVariants ? resolvedProduct.product_variants.find((x: any) => x.size === selectedSize).id : null, quantity: 1 }, user.id);
       await submitPreorder(user.id); // marks all cart items for user as 'inquired'
-      toast({ title: "Preorder submitted!", description: "The store will contact you soon." });
+      toast.success("Preorder submitted!", { description: "The store will contact you soon." });
       window.dispatchEvent(new Event("cartUpdated"));
       onOpenChange(false);
       return;
@@ -226,6 +226,9 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
         <DialogClose className="absolute right-4 top-4 z-50">
           {/* <X className="h-5 w-5" /> */}
         </DialogClose>
+        <div className="sr-only">
+          <DialogTitle>Product Details</DialogTitle>
+        </div>
 
         <div className="overflow-y-auto max-h-[95vh]">
           <div className="grid grid-cols-1 lg:grid-cols-2">
@@ -339,7 +342,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                     // If there are variants, require size selection
                     const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
                     if (hasVariants && !selectedSize) {
-                      toast({ title: 'Please select a size' });
+                      toast.warning('Please select a size');
                       return;
                     }
                     // Find variant id if exists
@@ -347,11 +350,11 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                     if (hasVariants) {
                       const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
                       if (!v) {
-                        toast({ title: 'Selected size unavailable' });
+                        toast.error('Selected size unavailable');
                         return;
                       }
                       if (v.stock === 0) {
-                        toast({ title: 'Selected size out of stock' });
+                        toast.error('Selected size out of stock');
                         return;
                       }
                       variant_id = v.id;

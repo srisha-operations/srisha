@@ -124,6 +124,18 @@ export const createOrder = async (
       throw new Error(`Failed to create order items: ${itemsError.message}`);
     }
 
+    // Log initial event (fire and forget)
+    try {
+      await supabase.from("order_events").insert({
+        order_id: orderId,
+        status: "PENDING", // Initial status
+        created_at: new Date().toISOString(),
+        payload: { event: "ORDER_PLACED" }
+      });
+    } catch (e) {
+      // ignore
+    }
+
     return { orderId, orderNumber };
   } catch (e) {
     console.error("createOrder error:", e);

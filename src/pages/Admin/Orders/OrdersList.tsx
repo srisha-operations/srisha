@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2, Eye } from "lucide-react";
-import { listOrders, updateOrderStatus, deleteOrder, Order } from "@/services/orders";
+import { listOrders, deleteOrder, Order } from "@/services/orders";
 import { humanizeStatus } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
@@ -15,6 +15,7 @@ const OrdersList = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -24,13 +25,14 @@ const OrdersList = () => {
 
   useEffect(() => {
     loadOrders();
-  }, [statusFilter, searchQuery, currentPage]);
+  }, [statusFilter, paymentFilter, searchQuery, currentPage]);
 
   const loadOrders = async () => {
     setLoading(true);
     const { orders: data, total } = await listOrders(
       {
         status: statusFilter === "all" ? undefined : statusFilter,
+        paymentStatus: paymentFilter === "all" ? undefined : paymentFilter,
         search: searchQuery || undefined,
       },
       pageSize,
@@ -41,15 +43,7 @@ const OrdersList = () => {
     setLoading(false);
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    const result = await updateOrderStatus(orderId, newStatus as Order["order_status"]);
-    if (result.success) {
-      toast({ title: "Order status updated", duration: 2000 });
-      loadOrders();
-    } else {
-      toast({ title: `Error: ${result.error}`, duration: 3000 });
-    }
-  };
+
 
   const handleDelete = async (orderId: string) => {
     if (!confirm("Are you sure you want to delete this order?")) return;
@@ -76,6 +70,13 @@ const OrdersList = () => {
     DISPATCHED: "bg-cyan-100 text-cyan-800",
     DELIVERED: "bg-green-100 text-green-800",
     CANCELLED: "bg-red-100 text-red-800",
+  };
+  
+  const paymentColors: Record<string, string> = {
+    PAID: "bg-green-100 text-green-800",
+    INITIATED: "bg-yellow-100 text-yellow-800",
+    PENDING: "bg-yellow-100 text-yellow-800",
+    FAILED: "bg-red-100 text-red-800",
   };
 
   const pageCount = Math.ceil(totalOrders / pageSize);
@@ -105,23 +106,39 @@ const OrdersList = () => {
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Filter by Status</label>
-            <Select value={statusFilter} onValueChange={(val) => {
-              setStatusFilter(val);
-              setCurrentPage(0);
-            }}>
-              <SelectTrigger className="font-lato">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={(val) => {
+                setStatusFilter(val);
+                setCurrentPage(0);
+              }}>
+                <SelectTrigger className="font-lato w-full">
+                  <SelectValue placeholder="Order Status" />
+                </SelectTrigger>
+                  <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                  <SelectItem value="DISPATCHED">Shipped</SelectItem>
+                  <SelectItem value="DELIVERED">Delivered</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={paymentFilter} onValueChange={(val) => {
+                setPaymentFilter(val);
+                setCurrentPage(0);
+              }}>
+                <SelectTrigger className="font-lato w-full">
+                  <SelectValue placeholder="Payment Status" />
+                </SelectTrigger>
                 <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending_payment">Pending Payment</SelectItem>
-                <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
+                  <SelectItem value="all">All Payments</SelectItem>
+                  <SelectItem value="INITIATED">Initiated</SelectItem>
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="FAILED">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -141,6 +158,7 @@ const OrdersList = () => {
                   <TableHead className="font-tenor">Customer</TableHead>
                   <TableHead className="font-tenor">Email</TableHead>
                   <TableHead className="font-tenor">Amount</TableHead>
+                  <TableHead className="font-tenor">Payment</TableHead>
                   <TableHead className="font-tenor">Status</TableHead>
                   <TableHead className="font-tenor">Date</TableHead>
                   <TableHead className="font-tenor text-right">Actions</TableHead>
@@ -155,20 +173,17 @@ const OrdersList = () => {
                     <TableCell className="font-lato">
                       {formatPrice(order.total_amount || order.total || 0)}
                     </TableCell>
+                    <TableCell className="font-lato">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          paymentColors[order.payment_status || "PENDING"] || paymentColors.PENDING
+                        }`}>
+                          {order.payment_status || 'PENDING'}
+                        </span>
+                    </TableCell>
                     <TableCell>
-                      <Select value={order.order_status ?? "PENDING"} onValueChange={(val) => handleStatusChange(order.id, val)}>
-                        <SelectTrigger className={`w-40 text-xs font-lato ${statusColors[order.order_status] || ""}`}>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PENDING">Pending</SelectItem>
-                          <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                          <SelectItem value="DISPATCHED">Dispatched</SelectItem>
-                          <SelectItem value="DELIVERED">Delivered</SelectItem>
-                          <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <span className="ml-2 text-xs text-muted-foreground">{humanizeStatus(order.order_status)}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColors[order.order_status] || "bg-gray-100 text-gray-800"}`}>
+                        {humanizeStatus(order.order_status)}
+                      </span>
                     </TableCell>
                     <TableCell className="font-lato text-sm">{formatDate(order.created_at)}</TableCell>
                     <TableCell className="text-right space-x-2">
@@ -180,14 +195,7 @@ const OrdersList = () => {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDelete(order.id)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+
                     </TableCell>
                   </TableRow>
                 ))}

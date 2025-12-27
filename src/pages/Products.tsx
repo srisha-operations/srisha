@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Loader } from "@/components/ui/loader";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -11,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { toast } from "sonner";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +21,6 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { supabase } from "@/lib/supabaseClient";
 import { getCurrentUser } from "@/services/auth";
 import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
-import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
 
 type ViewMode = "grid" | "list";
@@ -28,6 +29,7 @@ const Products = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>("name-asc");
   const [products, setProducts] = useState<any[]>([]);
   const [productsRaw, setProductsRaw] = useState<any[]>([]);
@@ -90,7 +92,7 @@ const Products = () => {
       console.error("toggle wishlist failed", err);
       // revert
       setWishlistIds((s) => (prev ? [...s, productId] : s.filter((id) => id !== productId)));
-      toast({ title: "Could not update wishlist" });
+      toast.error("Could not update wishlist");
     }
   };
 
@@ -156,6 +158,7 @@ const Products = () => {
         setPriceRange([Math.floor(minP), Math.ceil(maxP)]);
         setSelectedPriceRange([Math.floor(minP), Math.ceil(maxP)]);
       }
+      setLoading(false);
     };
 
     loadProducts();
@@ -234,6 +237,7 @@ const Products = () => {
       <Header />
 
       <main className="pt-24 pb-[100px] px-8 lg:px-16 xl:px-24">
+        {loading && <Loader fullScreen />}
         {/* Header Bar */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-12 gap-4">
           <h1 className="font-tenor text-4xl lg:text-5xl text-foreground tracking-wide">
@@ -312,15 +316,11 @@ const Products = () => {
                 onToggleWishlist={() => toggleWishlist(product.id)}
                 onProductClick={handleProductClick}
                 primaryActionLabel="ADD TO CART"
-                primaryActionHandler={async () => {
-                  const { addToCart } = await import("@/services/cart");
-                  const user = (await import("@/services/auth")).getCurrentUser();
-                  const u = await user;
-                  await addToCart({ product_id: product.id, quantity: 1 }, u?.id);
-                  // simple scale animation is handled at button level in ProductCard
-                  window.dispatchEvent(new Event("cartUpdated"));
-                  if (!u) window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }));
+                primaryActionHandler={() => {
+                  handleProductClick(product);
+                  toast.info("Select Size", { description: "Please select a size to add to cart." });
                 }}
+                disableActionSuccessAnimation={true}
                 showWhatsApp={false}
               />
             ))}
@@ -382,13 +382,9 @@ const Products = () => {
 
                     {/* Add to Cart Button */}
                     <Button
-                      onClick={async () => {
-                        const { addToCart } = await import("@/services/cart");
-                        const { getCurrentUser } = await import("@/services/auth");
-                        const user = await getCurrentUser();
-                        await addToCart({ product_id: product.id, quantity: 1 }, user?.id);
-                        window.dispatchEvent(new Event("cartUpdated"));
-                        if (!user) window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }));
+                      onClick={() => {
+                        handleProductClick(product);
+                        toast.info("Select Size", { description: "Please select a size to add to cart." });
                       }}
                       variant="outline"
                       className="flex-1"

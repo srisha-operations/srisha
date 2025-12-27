@@ -13,9 +13,13 @@ export interface Order {
   total?: number;
   order_status: "PENDING" | "CONFIRMED" | "DISPATCHED" | "DELIVERED" | "CANCELLED";
   payment_status?: "INITIATED" | "PAID" | "FAILED" | "REFUNDED";
+  razorpay_payment_id?: string;
+  razorpay_order_id?: string;
+  razorpay_signature?: string;
   is_preorder?: boolean;
   created_at: string;
   updated_at?: string;
+  estimated_delivery_date?: string;
 }
 
 export interface OrderItem {
@@ -34,6 +38,7 @@ export interface OrderItem {
 export const listOrders = async (
   filter?: {
     status?: string;
+    paymentStatus?: string;
     search?: string; // search by email, name, or order number
   },
   limit = 50,
@@ -45,6 +50,9 @@ export const listOrders = async (
     // Apply filters
     if (filter?.status) {
       query = query.eq("order_status", filter.status);
+    }
+    if (filter?.paymentStatus) {
+      query = query.eq("payment_status", filter.paymentStatus);
     }
 
     if (filter?.search) {
@@ -86,7 +94,6 @@ export const getOrder = async (orderId: string): Promise<Order | null> => {
       console.error("getOrder error:", error);
       return null;
     }
-
     return data;
   } catch (err) {
     console.error("getOrder exception:", err);
@@ -101,9 +108,8 @@ export const getOrderItems = async (orderId: string): Promise<OrderItem[]> => {
   try {
     const { data, error } = await supabase
       .from("order_items")
-      .select("*")
-      .eq("order_id", orderId)
-      .order("created_at", { ascending: true });
+      .select(`*, product:products(*, product_images(*))`)
+      .eq("order_id", orderId);
 
     if (error) {
       console.error("getOrderItems error:", error);
@@ -122,12 +128,18 @@ export const getOrderItems = async (orderId: string): Promise<OrderItem[]> => {
  */
 export const updateOrderStatus = async (
   orderId: string,
-  status: Order["order_status"]
+  status: Order["order_status"],
+  estimatedDeliveryDate?: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    const updatePayload: any = { order_status: status };
+    if (estimatedDeliveryDate !== undefined) {
+      updatePayload.estimated_delivery_date = estimatedDeliveryDate;
+    }
+
     const { error } = await supabase
       .from("orders")
-      .update({ order_status: status, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", orderId);
 
     if (error) {
@@ -135,24 +147,26 @@ export const updateOrderStatus = async (
       return { success: false, error: error.message };
     }
 
-    // Optional: create an order_events entry to notify other systems (this will fail silently if table not present)
+    // Log to order_events table
     try {
-      await supabase.from("order_events").insert({ order_id: orderId, status, created_at: new Date().toISOString() });
-    } catch (err) {
-      // ignore: some deployments may not have order_events table
+      await supabase.from("order_events").insert({ 
+        order_id: orderId, 
+        status: status, 
+        created_at: new Date().toISOString(),
+        payload: { 
+          event: "STATUS_CHANGE",
+          new_status: status,
+          estimated_delivery_date: estimatedDeliveryDate 
+        }
+      });
+    } catch (err) { 
+       console.warn("Failed to log order_event (table might contain issues)", err);
     }
-    // Create an app-level event record
-    await createOrderEvent(orderId, { type: "status_change", payload: { status } });
-    // optional: notify via supabase function 'send_order_notification' if available
+    
+    // Attempt notification (best effort)
     try {
-      const { supabase: sb } = await import("@/lib/supabaseClient");
-      if (sb?.functions?.invoke) {
-        // best-effort call to an edge function
-        await sb.functions.invoke("send_order_notification", { body: { order_id: orderId, status } });
-      }
-    } catch (err) {
-      // ignore
-    }
+        notifyCustomerOrderStatusChange(orderId, status);
+    } catch(e) { }
 
     return { success: true };
   } catch (err) {

@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
 import { getCurrentUser } from "@/services/auth";
 import { addToCart } from "@/services/cart";
+import { toast } from "sonner";
 
 const mapProductForCard = (p: any) => {
   const images = p.product_images || [];
@@ -80,8 +81,7 @@ const ProductListingSection = () => {
       // revert
       setWishlistState((s) => ({ ...s, [productId]: prev }));
       // notify user
-      const { toast } = await import("@/hooks/use-toast");
-      toast({ title: "Could not update wishlist" });
+      toast.error("Could not update wishlist");
     }
   };
 
@@ -197,14 +197,12 @@ const ProductListingSection = () => {
                     onToggleWishlist={() => toggleWishlist(product.id)}
                     onProductClick={handleProductClick}
                     primaryActionLabel="ADD TO CART"
-                    primaryActionHandler={async () => {
-                      const user = await getCurrentUser();
-                      await addToCart({ product_id: product.id, quantity: 1 }, user?.id);
-                      window.dispatchEvent(new Event("cartUpdated"));
-                      // If guest, prompt sign in
-                      if (!user) window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }));
+                    primaryActionHandler={() => {
+                      handleProductClick(product);
+                      toast.info("Select Size", { description: "Please select a size to add to cart." });
                     }}
                     showWhatsApp={false}
+                    disableActionSuccessAnimation={true}
                   />
                 </div>
               ))}

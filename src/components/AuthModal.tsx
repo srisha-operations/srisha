@@ -13,7 +13,7 @@ import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { X } from "lucide-react";
 import { signIn, signUp } from "@/services/auth";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface AuthModalProps {
   open: boolean;
@@ -47,17 +47,39 @@ const AuthModal = ({
     e.preventDefault();
     setIsLoading(true);
 
+    // Basic Validation
+    if (!formData.email.includes("@") || !formData.email.includes(".")) {
+      toast.error("Invalid Email", {
+        description: "Please enter a valid email address.",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error("Password too short", {
+        description: "Password must be at least 6 characters long.",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       let user;
       if (view === "signup") {
+        if (!formData.name.trim()) {
+          toast.error("Name required", { description: "Please enter your full name." });
+          setIsLoading(false);
+          return;
+        }
+        
         user = await signUp(
           formData.name,
           formData.email,
           formData.phone,
           formData.password
         );
-        toast({
-          title: "Signup successful!",
+        toast.success("Signup successful!", {
           description: "Check your email to confirm your account.",
         });
       } else {
@@ -68,8 +90,7 @@ const AuthModal = ({
           email: user.email,
         });
 
-        toast({
-          title: "Welcome back!",
+        toast.success("Welcome back!", {
           description: `Signed in as ${user.email}`,
         });
       }
@@ -84,10 +105,16 @@ const AuthModal = ({
         }, 100);
       }
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Authentication failed",
-        variant: "destructive",
+      console.error("Auth error:", err);
+      let msg = err.message || "Authentication failed";
+      
+      // Map Supabase errors to user-friendly messages
+      if (msg.includes("User already registered")) msg = "User already exists. Please sign in instead.";
+      if (msg.includes("Invalid login credentials")) msg = "Invalid email or password.";
+      if (msg.includes("rate limit")) msg = "Too many attempts. Please try again later.";
+
+      toast.error(view === "signin" ? "Sign In Failed" : "Sign Up Failed", {
+        description: msg,
       });
     } finally {
       setIsLoading(false);
@@ -118,7 +145,6 @@ const AuthModal = ({
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    required
                   />
                 </div>
               )}
@@ -130,7 +156,6 @@ const AuthModal = ({
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  required
                 />
               </div>
 
@@ -142,7 +167,6 @@ const AuthModal = ({
                     onChange={(e) =>
                       setFormData({ ...formData, phone: e.target.value })
                     }
-                    required
                   />
                 </div>
               )}
@@ -155,7 +179,6 @@ const AuthModal = ({
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  required
                 />
               </div>
 

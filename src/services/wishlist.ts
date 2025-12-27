@@ -1,6 +1,6 @@
 // src/services/wishlist.ts
 import { supabase } from "@/lib/supabaseClient";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 /**
  * Wishlist service
@@ -82,7 +82,7 @@ export const addWishlistItem = async (
         // update UI and notify
         window.dispatchEvent(new Event("wishlistUpdated"));
         try {
-          toast({ title: "Added to wishlist", description: "Item added to your wishlist." });
+          toast.success("Added to wishlist", { description: "Item added to your wishlist." });
         } catch (e) {
           // ignore toast errors
         }
@@ -106,7 +106,7 @@ export const addWishlistItem = async (
   wishlistCache = wishlistCache.includes(productId) ? wishlistCache : [...wishlistCache, productId];
   window.dispatchEvent(new Event("wishlistUpdated"));
   try {
-    toast({ title: "Added to wishlist", description: "Item added to your wishlist." });
+    toast.success("Added to wishlist", { description: "Item added to your wishlist." });
   } catch (e) {}
 };
 
@@ -126,7 +126,7 @@ export const removeWishlistItem = async (
       wishlistCache = filtered;
       window.dispatchEvent(new Event("wishlistUpdated"));
       try {
-        toast({ title: "Removed from wishlist", description: "Item removed from your wishlist." });
+        toast.success("Removed from wishlist", { description: "Item removed from your wishlist." });
       } catch (e) {}
       return;
     } catch (err) {
@@ -146,7 +146,7 @@ export const removeWishlistItem = async (
   lastWishlistFetch = 0;
   window.dispatchEvent(new Event("wishlistUpdated"));
   try {
-    toast({ title: "Removed from wishlist", description: "Item removed from your wishlist." });
+    toast.success("Removed from wishlist", { description: "Item removed from your wishlist." });
   } catch (e) {}
 };
 
@@ -159,7 +159,7 @@ export const clearWishlist = async (userId?: string | null) => {
       wishlistCache = [];
       lastWishlistFetch = 0;
       window.dispatchEvent(new Event("wishlistUpdated"));
-      try { toast({ title: "Wishlist cleared", description: "Your wishlist is now empty." }); } catch (e) {}
+      try { toast.success("Wishlist cleared", { description: "Your wishlist is now empty." }); } catch (e) {}
       return { success: true };
     }
 
@@ -171,7 +171,7 @@ export const clearWishlist = async (userId?: string | null) => {
     wishlistCache = [];
     lastWishlistFetch = 0;
     window.dispatchEvent(new Event("wishlistUpdated"));
-    try { toast({ title: "Wishlist cleared", description: "Your wishlist is now empty." }); } catch (e) {}
+    try { toast.success("Wishlist cleared", { description: "Your wishlist is now empty." }); } catch (e) {}
     return { success: true };
   } catch (e) {
     console.error("clearWishlist exception", e);
