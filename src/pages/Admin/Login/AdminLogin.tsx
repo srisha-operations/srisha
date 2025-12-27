@@ -4,9 +4,9 @@ import { clearCart } from "@/services/cart";
 import { clearWishlist } from "@/services/wishlist";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Lock } from "lucide-react";
 
 const AdminSignin = () => {
   const [email, setEmail] = useState("");
@@ -15,6 +15,9 @@ const AdminSignin = () => {
   const [error, setError] = useState("");
   const [notAdminUserId, setNotAdminUserId] = useState<string | null>(null);
   const [policyBlocked, setPolicyBlocked] = useState(false);
+  
+  // Use a gallery image for background
+  const bgImage = "https://xvatizmdsnsstumjhxxg.supabase.co/storage/v1/object/public/srisha/gallery/gallery-43-1.JPEG";
 
   const handleLogin = async () => {
     setError("");
@@ -54,16 +57,13 @@ const AdminSignin = () => {
     }
 
     // Check admin table: prefer role column if present
-    // Attempt to select role column if present; fallback to selecting id only if role missing
     let adminRow: any = null;
     try {
       const res = await supabase.from("admins").select("id, role").eq("id", data.user.id).single();
       if (res.error) {
-        // If PostgREST returns 406 it usually means `.single()` didn't find a row (or RLS blocked access)
         if ((res.error as any)?.status === 406) {
           setPolicyBlocked(true);
         }
-        // if error likely due to missing role column or no row, try selecting id only
         const fallback = await supabase.from("admins").select("id").eq("id", data.user.id).single();
         if ((fallback.error as any)?.status === 406) setPolicyBlocked(true);
         adminRow = fallback.data;
@@ -71,7 +71,6 @@ const AdminSignin = () => {
         adminRow = res.data;
       }
     } catch (err) {
-      // unexpected error, fallback to id-only select
       const fallback = await supabase.from("admins").select("id").eq("id", data.user.id).single();
       if ((fallback as any)?.error?.status === 406) setPolicyBlocked(true);
       adminRow = fallback.data;
@@ -101,67 +100,93 @@ const AdminSignin = () => {
   };
 
   return (
-    <>
-    <div className="flex items-center justify-center h-screen">
-      <div className="max-w-sm w-full p-6 border rounded">
-        <h1 className="text-xl mb-4">Admin Login</h1>
+    <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-black">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 z-0 bg-cover bg-center opacity-60"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      />
+      <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-[2px]" />
 
-        <Input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-        <Input
-          type="password"
-          placeholder="Password"
-          className="mt-3"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
-        
-        {error && <p className="text-red-500 mt-2">{error}</p>}
+      {/* Login Card */}
+      <div className="relative z-10 w-full max-w-md px-6">
+         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl p-8 md:p-10 space-y-6">
+            <div className="text-center space-y-2">
+               <h1 className="font-tenor text-3xl text-white tracking-widest">SRISHA</h1>
+               <p className="font-lato text-white/70 text-sm tracking-wide uppercase">Admin Portal</p>
+            </div>
 
-        <Button className="mt-4 w-full" onClick={handleLogin}>
-          Login
-        </Button>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-1">
+                <Input 
+                  placeholder="Admin Email" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11 focus-visible:ring-offset-0 focus-visible:ring-1 focus-visible:ring-white/50 focus-visible:border-white/50"
+                />
+              </div>
+              <div className="space-y-1">
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11 focus-visible:ring-offset-0 focus-visible:ring-1 focus-visible:ring-white/50 focus-visible:border-white/50"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="text-rose-300 text-sm text-center bg-rose-500/10 border border-rose-500/20 p-2 rounded">
+                {error}
+              </div>
+            )}
+
+            <Button 
+                className="w-full h-11 bg-white text-black hover:bg-white/90 font-tenor tracking-widest text-sm transition-all"
+                onClick={handleLogin}
+            >
+              <Lock className="w-3.5 h-3.5 mr-2" />
+              AUTHENTICATE
+            </Button>
+
+            <div className="text-center pt-2">
+               <a href="/" className="text-xs text-white/50 hover:text-white transition-colors border-b border-transparent hover:border-white/50 pb-0.5">
+                  Back to Store
+               </a>
+            </div>
+         </div>
       </div>
-    </div>
-    {notAdminUserId && (
-      <div className="mt-4 p-4 bg-yellow-50 border border-yellow-100 rounded text-sm">
-        <p className="mb-2">Your account is not present in the <code>admins</code> table.</p>
-        <p className="mb-2">Run the following SQL in your Supabase SQL editor (replace if needed):</p>
-        <pre className="p-2 bg-white border rounded text-xs overflow-auto">INSERT INTO admins (id, role) VALUES ('{notAdminUserId}', 'admin') ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;</pre>
-        <div className="flex gap-2 mt-2">
-          <button
-            className="px-3 py-1 bg-primary text-white rounded"
-            onClick={() => {
-              navigator.clipboard.writeText(`INSERT INTO admins (id, role) VALUES ('${notAdminUserId}', 'admin') ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;`);
-              setError('Admin SQL copied to clipboard');
-            }}
-          >
-            Copy admin SQL
-          </button>
-          <a
-            className="px-3 py-1 bg-white border rounded text-sm"
-            href="https://app.supabase.com/" target="_blank" rel="noreferrer noopener"
-          >Open Supabase</a>
+      
+      {/* Help Messages (Only show if needed) */}
+      {(notAdminUserId || policyBlocked) && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 max-w-2xl mx-auto">
+          {notAdminUserId && (
+            <div className="p-4 bg-white rounded shadow-lg border border-yellow-100 text-sm mb-2">
+              <p className="mb-2 font-medium text-amber-800">Account needs Admin access</p>
+              <pre className="p-2 bg-slate-50 border rounded text-xs overflow-auto mb-2 text-slate-700">INSERT INTO admins (id, role) VALUES ('{notAdminUserId}', 'admin') ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;</pre>
+              <button
+                className="text-xs text-blue-600 hover:underline"
+                onClick={() => {
+                  navigator.clipboard.writeText(`INSERT INTO admins (id, role) VALUES ('${notAdminUserId}', 'admin') ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;`);
+                  toast.success("SQL copied");
+                }}
+              >
+                Copy SQL
+              </button>
+            </div>
+          )}
+          {policyBlocked && (
+             <div className="p-4 bg-white rounded shadow-lg border border-blue-100 text-sm">
+                 <p className="mb-2 font-medium text-blue-800">Database Policy required</p>
+                 <p className="text-xs text-slate-600 mb-2">RLS is blocking access to the admins table.</p>
+                 <pre className="p-2 bg-slate-50 border rounded text-xs overflow-auto text-slate-700">ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "AllowAdminSelectOwn" ON public.admins FOR SELECT USING (auth.uid() = id);</pre>
+             </div>
+          )}
         </div>
-      </div>
-    )}
-    {policyBlocked && (
-      <div className="mt-4 p-4 bg-rose-50 border border-rose-100 rounded text-sm">
-        <h4 className="font-medium mb-2">DB access blocked by RLS / policy</h4>
-        <p className="mb-2">The client successfully signed in, but the app could not read the <code>admins</code> row because the DB blocked the request (PostgREST returned 406). This usually happens when Row Level Security (RLS) prevents the authenticated user from selecting that table.</p>
-        <p className="mb-2">To allow the signed-in user to check their admin row, run this SQL in Supabase SQL editor:</p>
-        <pre className="p-2 bg-white border rounded text-xs overflow-auto">-- allow authenticated users to select their own admins row
-ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "AllowAdminSelectOwn" ON public.admins
-  FOR SELECT USING (auth.uid() = id);
-</pre>
-        <p className="mt-2">After applying the policy, sign in again to access the admin dashboard. If you want admins to view all orders, also run:</p>
-        <pre className="p-2 bg-white border rounded text-xs overflow-auto">-- allow admins to read all orders
-CREATE POLICY "AllowAdminReadOrders" ON public.orders
-  FOR SELECT USING (EXISTS (SELECT 1 FROM public.admins WHERE id = auth.uid()));
-</pre>
-      </div>
-    )}
-    </>
+      )}
+    </div>
   );
 };
 
