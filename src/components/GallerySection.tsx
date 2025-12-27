@@ -4,6 +4,16 @@ import images from "@/data/images.json";
 import content from "@/data/content.json";
 
 const GallerySection = ({ gallery }: { gallery: any }) => {
+  // Merge prop with local content as fallback to ensure text is never empty/placeholder
+  const displayGallery = {
+    ...content.gallery,
+    ...gallery,
+    blocks: {
+      ...content.gallery.blocks,
+      ...gallery?.blocks
+    }
+  };
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [inViewItems, setInViewItems] = useState<Set<string>>(new Set());
   const sectionRef = useRef<HTMLElement>(null);
@@ -34,10 +44,10 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
 
   const getAnimationClass = (id: string, delay: string = "0ms") => {
     const isVisible = inViewItems.has(id);
-    return `transition-all duration-1000 ease-out transform ${
+    return `transition-all duration-700 ease-out transform-gpu ${
       isVisible
-        ? "opacity-100 translate-y-0 scale-100 blur-0"
-        : "opacity-0 translate-y-12 scale-95 blur-[2px]"
+        ? "opacity-100 translate-y-0 scale-100"
+        : "opacity-0 translate-y-8 scale-95"
     }`;
   };
 
@@ -59,7 +69,7 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
         {/* Section Title with Collapse Toggle */}
         <div className="flex items-center justify-center mb-12 md:mb-12 relative">
           <h2 className="text-3xl md:text-4xl font-tenor text-center text-foreground">
-            {gallery.title}
+            {displayGallery.title}
           </h2>
           {isExpanded && (
             <button
@@ -76,8 +86,8 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
         <div className="relative w-full mb-16 md:mb-12">
           <div className="relative w-full aspect-video overflow-hidden">
             <img
-              src={gallery?.hero_block?.image || ""}
-              alt={gallery?.hero_block?.alt || ""}
+              src={displayGallery?.hero_block?.image || ""}
+              alt={displayGallery?.hero_block?.alt || ""}
               className="w-full h-full object-cover object-center hover:scale-105 transition-transform duration-1000 ease-out"
               loading="lazy"
               data-gallery-animate
@@ -90,7 +100,7 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
                   onClick={() => setIsExpanded(true)}
                   className="bg-transparent border border-white/90 text-white/90 hover:bg-[#F3EEE6] hover:text-[#2C2C2C] hover:border-[#2C2C2C] font-tenor tracking-wider px-8 py-6 text-base transition-all duration-500 rounded-none transform hover:translate-y-[-2px]"
                 >
-                  {gallery.hero_cta}
+                  {displayGallery.hero_cta}
                 </Button>
               </div>
             )}
@@ -104,8 +114,8 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="w-full aspect-[4/5] overflow-hidden overflow-y-hidden">
                 <img
-                  src={gallery?.blocks?.portrait_left?.image || ""}
-                  alt={gallery?.blocks?.portrait_left?.alt || ""}
+                  src={displayGallery?.blocks?.portrait_left?.image || ""}
+                  alt={displayGallery?.blocks?.portrait_left?.alt || ""}
                   className={`w-full h-full object-cover object-center hover:scale-105 ${getAnimationClass("portrait-left")}`}
                   loading="lazy"
                   decoding="async"
@@ -119,18 +129,18 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
                 data-id="text-left"
               >
                 <h3 className="text-2xl md:text-3xl font-tenor text-foreground leading-relaxed">
-                  {gallery?.blocks?.portrait_left?.title || ""}
+                  {displayGallery?.blocks?.portrait_left?.title || ""}
                 </h3>
                 <p className="text-base md:text-lg font-lato text-muted-foreground leading-relaxed">
-                  {gallery?.blocks?.portrait_left?.caption || ""}
+                  {displayGallery?.blocks?.portrait_left?.caption || ""}
                 </p>
               </div>
             </div>
 
             {/* Block 3: 3× Portrait Grid (9:16) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-              {gallery?.three_grid?.map((image, idx) => (
-                  <div key={image.url || image.id} className="w-full aspect-[9/16] overflow-hidden">
+              {displayGallery?.three_grid?.map((image: any, idx: number) => (
+                  <div key={`grid-item-${idx}`} className="w-full aspect-[9/16] overflow-hidden">
                   <img
                     src={image?.image || ""}
                     alt={image.alt || ""}
@@ -148,21 +158,21 @@ const GallerySection = ({ gallery }: { gallery: any }) => {
             {/* Block 4: 3:4 Portrait + Text (Image Right, Text Left) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div 
-                className={`flex flex-col justify-center space-y-4 px-4 md:px-8 md:order-1 ${getAnimationClass("text-right")}`}
+                className={`flex flex-col justify-center space-y-4 px-4 md:px-8 md:order-1 ${getAnimationClass("text-right", "200ms")}`}
                 data-gallery-animate
                 data-id="text-right"
               >
                 <h3 className="text-2xl md:text-3xl font-tenor text-foreground leading-relaxed">
-                  {gallery?.blocks?.portrait_right?.title || ""}
+                  {displayGallery?.blocks?.portrait_right?.title || ""}
                 </h3>
                 <p className="text-base md:text-lg font-lato text-muted-foreground leading-relaxed">
-                  {gallery?.blocks?.portrait_right?.caption || ""}
+                  {displayGallery?.blocks?.portrait_right?.caption || ""}
                 </p>
               </div>
               <div className="w-full aspect-[3/4] overflow-hidden md:order-2">
                 <img
-                  src={gallery?.blocks?.portrait_right?.image || ""}
-                  alt={gallery?.blocks?.portrait_right?.alt || ""}
+                  src={displayGallery?.blocks?.portrait_right?.image || ""}
+                  alt={displayGallery?.blocks?.portrait_right?.alt || ""}
                   className={`w-full h-full object-cover object-center hover:scale-105 ${getAnimationClass("portrait-right")}`}
                   loading="lazy"
                   decoding="async"

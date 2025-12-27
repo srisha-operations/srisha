@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Instagram, Youtube, Facebook, MapPin, Mail } from "lucide-react";
+import FooterModal from "./FooterModal";
+import footerContentData from "@/data/footerContent.json";
 
 const socialIcons: Record<string, JSX.Element> = {
   instagram: <Instagram className="w-4 h-4" />,
@@ -16,6 +18,7 @@ const otherIcons: Record<string, JSX.Element> = {
 
 const Footer = () => {
   const [footer, setFooter] = useState<any>(null);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
   useEffect(() => {
     const loadFooter = async () => {
@@ -37,83 +40,110 @@ const Footer = () => {
     loadFooter();
   }, []);
 
+  const handleLinkClick = (e: React.MouseEvent, url: string) => {
+    // Check if the URL maps to a modal content key
+    let key = "";
+    if (url.includes("orders")) key = "orders";
+    else if (url.includes("privacy")) key = "privacy";
+    else if (url.includes("faqs")) key = "faqs";
+
+    if (key && (footerContentData as any)[key]) {
+      e.preventDefault();
+      setActiveModal(key);
+    }
+  };
+
   if (!footer) return null;
 
-  return (
-    <footer
-      id="footer-contact"
-      className="w-full bg-background border-t border-border"
-    >
-      <div className="container mx-auto px-4 py-16 md:py-20 max-w-7xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 items-stretch justify-center">
-          {/* Quick Links */}
-          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
-            <h3 className="font-tenor text-lg mb-6 text-foreground">
-              Quick Links
-            </h3>
-            <ul className="space-y-3">
-              {footer?.quickLinks.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    to={link.url}
-                    className="font-lato text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+  const activeContent = activeModal ? (footerContentData as any)[activeModal] : null;
 
-          {/* Contact Us */}
-          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
-            <h3 className="font-tenor text-lg mb-6 text-foreground">
-              Contact Us
-            </h3>
-            <div className="space-y-3 font-lato text-sm text-muted-foreground">
-              <p className="flex items-center gap-2">
-                {otherIcons["mappin"]}
-                <span>{footer?.contact.address}</span>
-              </p>
-              <p className="flex items-center gap-2">
-                <span>{footer?.contact.number}</span>
-              </p>
-              <p className="flex items-center gap-2">
-                {otherIcons["mail"]}
-                <span>{footer?.contact.email}</span>
-              </p>
+  return (
+    <>
+      <footer
+        id="footer-contact"
+        className="w-full bg-background border-t border-border"
+      >
+        <div className="container mx-auto px-4 py-16 md:py-20 max-w-7xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 items-stretch justify-center">
+            {/* Quick Links */}
+            <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
+              <h3 className="font-tenor text-lg mb-6 text-foreground">
+                Quick Links
+              </h3>
+              <ul className="space-y-3">
+                {footer?.quickLinks.map((link: any) => (
+                  <li key={link.label}>
+                    <Link
+                      to={link.url}
+                      onClick={(e) => handleLinkClick(e, link.url)}
+                      className="font-lato text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Contact Us */}
+            <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
+              <h3 className="font-tenor text-lg mb-6 text-foreground">
+                Contact Us
+              </h3>
+              <div className="space-y-3 font-lato text-sm text-muted-foreground">
+                <p className="flex items-center gap-2 justify-center md:justify-start">
+                  {otherIcons["mappin"]}
+                  <span>{footer?.contact.address}</span>
+                </p>
+                <p className="flex items-center gap-2 justify-center md:justify-start">
+                  <span>{footer?.contact.number}</span>
+                </p>
+                <p className="flex items-center gap-2 justify-center md:justify-start">
+                  {otherIcons["mail"]}
+                  <span>{footer?.contact.email}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Socials */}
+            <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
+              <h3 className="font-tenor text-lg mb-6 text-foreground">Socials</h3>
+              <ul className="space-y-3 flex flex-col items-center md:items-start">
+                {footer?.socials.map((social: any) => (
+                  <li key={social.label}>
+                    <a
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 font-lato text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {socialIcons[social.type] || null}
+                      {social.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
-
-          {/* Socials */}
-          <div className="h-full w-full text-center md:text-left flex flex-col justify-start">
-            <h3 className="font-tenor text-lg mb-6 text-foreground">Socials</h3>
-            <ul className="space-y-3">
-              {footer?.socials.map((social) => (
-                <li key={social.label}>
-                  <a
-                    href={social.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 font-lato text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {socialIcons[social.type] || null}
-                    {social.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
-      </div>
 
-      {/* Copyright */}
-      <div className="border-t border-border py-6">
-        <p className="text-center font-lato text-sm text-muted-foreground">
-          {footer?.copyright}
-        </p>
-      </div>
-    </footer>
+        {/* Copyright */}
+        <div className="border-t border-border py-6">
+          <p className="text-center font-lato text-sm text-muted-foreground">
+            {footer?.copyright}
+          </p>
+        </div>
+      </footer>
+
+      {activeContent && (
+        <FooterModal 
+          isOpen={!!activeModal} 
+          onClose={() => setActiveModal(null)} 
+          title={activeContent.title} 
+          content={activeContent.content} 
+        />
+      )}
+    </>
   );
 };
 

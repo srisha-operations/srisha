@@ -1,0 +1,65 @@
+{
+    "orders": {
+        "title": "Orders & Shipment",
+        "content": [
+            {
+                "heading": "Order Placement",
+                "text": "Upon placing an order, you will receive a confirmation email with your order details. Our team will verify the payment and inventory."
+            },
+            {
+                "heading": "Processing Time",
+                "text": "Orders are typically processed within 1-2 business days. During peak seasons or sale periods, processing may take up to 3-4 business days."
+            },
+            {
+                "heading": "Shipping & Delivery",
+                "text": "We partner with trusted courier services to ensure timely delivery. Standard delivery takes 5-7 business days across India. You will receive a tracking link via email/SMS once your order is dispatched."
+            },
+            {
+                "heading": "International Shipping",
+                "text": "Currently, we only ship within India. International shipping will be coming soon."
+            }
+        ]
+    },
+    "privacy": {
+        "title": "Privacy Policy",
+        "content": [
+            {
+                "heading": "Data Collection",
+                "text": "We collect personal information such as your name, email, phone number, and shipping address when you place an order or sign up for our newsletter."
+            },
+            {
+                "heading": "Usage of Information",
+                "text": "Your data is used solely for processing orders, improving our services, and communicating with you regarding your purchases. We do not sell your data to third parties."
+            },
+            {
+                "heading": "Payment Security",
+                "text": "All payments are processed through secure gateways (Razorpay). We do not store your card details or banking information."
+            },
+            {
+                "heading": "Cookies",
+                "text": "We use cookies to enhance your browsing experience and analyze site traffic."
+            }
+        ]
+    },
+    "faqs": {
+        "title": "Frequently Asked Questions",
+        "content": [
+            {
+                "heading": "How do I track my order?",
+                "text": "You can track your order status in the 'My Orders' section. Once shipped, a tracking link will also be sent to your email."
+            },
+            {
+                "heading": "Can I cancel my order?",
+                "text": "Orders can be cancelled only before they are dispatched. If the order has already been shipped, it cannot be cancelled."
+            },
+            {
+                "heading": "What is the return policy?",
+                "text": "We accept returns for damaged or incorrect items within 7 days of delivery. Please contact our support team with unboxing video/images for assistance."
+            },
+            {
+                "heading": "Do you offer customization?",
+                "text": "Yes, we offer customization on select products. Please check the product description or contact us for more details."
+            }
+        ]
+    }
+}
