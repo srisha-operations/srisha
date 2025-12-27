@@ -71,27 +71,7 @@ const AdminLayout = () => {
             </NavLink>
           </div>
 
-          {/* Products Section */}
-          <div className="mb-6">
-            <div className="px-3 mb-3">
-              <p className="font-tenor text-xs tracking-widest text-muted-foreground uppercase">Inventory</p>
-            </div>
 
-            <NavLink
-              to="/admin/products"
-              onClick={() => setIsOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 rounded-lg font-lato text-sm transition-colors ${
-                  isActive
-                    ? "bg-white text-foreground font-semibold shadow-sm border border-border"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                }`
-              }
-            >
-              <Package className="w-4 h-4" />
-              Products
-            </NavLink>
-          </div>
 
           {/* Orders Section */}
           <div className="mb-6">

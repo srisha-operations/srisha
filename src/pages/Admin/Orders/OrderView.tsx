@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, User, MapPin, CreditCard, Box, Calendar, AlertCircle, Copy, CheckCircle2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import { getOrder, getOrderItems, Order, OrderItem, updateOrderStatus } from "@/
 import { humanizeStatus } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
 
 const OrderView = () => {
   const { id } = useParams<{ id: string }>();
@@ -138,300 +139,348 @@ const OrderView = () => {
 
   if (loading) {
     return (
-      <div className="text-center py-12 text-muted-foreground">Loading order...</div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center text-muted-foreground animate-pulse">Loading order details...</div>
+      </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="space-y-4">
-        <Button variant="ghost" onClick={() => navigate('/admin/orders')} className="font-lato">
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+        <h2 className="text-xl font-tenor text-foreground">Order Not Found</h2>
+        <Button variant="outline" onClick={() => navigate('/admin/orders')} className="font-lato">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Orders
         </Button>
-        <div className="text-center py-12 text-muted-foreground">Order not found</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/admin/orders")} className="font-lato">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-3xl font-tenor text-foreground">Order {order?.order_number}</h1>
-          <p className="text-sm text-muted-foreground">
-            {order && new Date(order.created_at).toLocaleDateString("en-IN", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Order Details */}
-        <div className="bg-white rounded-lg border border-border p-6 space-y-4">
+    <div className="max-w-7xl mx-auto space-y-8 pb-20 fade-in">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-border pb-6">
+        <div className="flex items-start gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate("/admin/orders")} className="shrink-0 h-10 w-10">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
           <div>
-            <h2 className="text-lg font-tenor text-foreground mb-4">Order Details</h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Order Number</p>
-                <p className="font-lato">{order.order_number}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Status</p>
-                <div className="flex items-center gap-2">
-                  <Select 
-                    value={order.order_status} 
-                    onValueChange={handleStatusChangeRequest}
-                    disabled={order.order_status === 'DELIVERED' || order.order_status === 'CANCELLED'}
-                  >
-                  <SelectTrigger className="w-full font-lato">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                    <SelectItem value="DISPATCHED">Dispatched</SelectItem>
-                    <SelectItem value="DELIVERED">Delivered</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                  </SelectContent>
-                  </Select>
-                  <span className="text-sm text-muted-foreground">{humanizeStatus(order.order_status)}</span>
-                </div>
-              </div>
-
-        <AlertDialog open={!!statusToUpdate} onOpenChange={(open) => !open && setStatusToUpdate(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {doubleConfirm ? "⚠️ Critical Warning" : (statusToUpdate ? "Change Order Status" : "Confirm Action")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {doubleConfirm ? (
-                  <span className="text-red-600 block bg-red-50 p-3 rounded-md border border-red-200">
-                    <strong>Warning:</strong> {statusToUpdate === 'CANCELLED' ? "You are about to CANCEL this order." : `You are reverting the order status backwards from ${order.order_status} to ${statusToUpdate}.`}
-                    <br/><br/>
-                    {statusToUpdate === 'CANCELLED' ? "This action should only be taken if you are absolutely sure. Ensure the customer is aware." : "This is generally not recommended if the customer has already paid or if the order has progressed."}
-                    <br/><br/>
-                    Are you absolutely sure you want to proceed?
-                  </span>
-                ) : (
-                  <span>
-                    Are you sure you want to change the order status from <strong>{order.order_status}</strong> to <strong>{statusToUpdate}</strong>?
-                    {isBackwardStatusChange(order.order_status, statusToUpdate!) && (
-                      <span className="block mt-2 text-amber-600 font-medium">
-                        Using a previous status status will require double confirmation.
-                      </span>
-                    )}
-                  </span>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setDoubleConfirm(false)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={(e) => {
-                  e.preventDefault(); // Prevent auto-close
-                  confirmStatusChange();
-                }}
-                className={doubleConfirm ? "bg-red-600 hover:bg-red-700 text-white" : ""}
-              >
-                {doubleConfirm ? "Yes, Force Update" : "Confirm Change"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Total Amount</p>
-                <p className="font-lato text-lg font-semibold">₹{(order.total_amount || order.total || 0).toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Is Preorder</p>
-                <p className="font-lato">{order.is_preorder ? "Yes" : "No"}</p>
-              </div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl md:text-3xl font-tenor text-foreground">Order {order.order_number}</h1>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide ${
+                  order.order_status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
+                  order.order_status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                  'bg-blue-50 text-blue-800 border border-blue-100'
+                }`}>
+                {humanizeStatus(order.order_status)}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground font-lato">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                {new Date(order.created_at).toLocaleDateString("en-IN", {
+                  year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
+                })}
+              </span>
+              <span className="hidden md:inline text-gray-300">•</span>
+              <span className="flex items-center gap-1.5">
+                <Box className="w-4 h-4 text-gray-400" />
+                {items.reduce((acc, item) => acc + item.quantity, 0)} Items
+              </span>
+              <span className="hidden md:inline text-gray-300">•</span>
+              <span className="font-medium text-foreground">
+                Total: ₹{(order.total_amount || order.total || 0).toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
-          <div className="bg-white rounded-lg border border-border p-6 space-y-4 shadow-sm">
-             <div>
-               <h2 className="text-lg font-tenor text-foreground mb-4">Delivery Estimate</h2>
-               <div className="space-y-3">
-                 <p className="text-xs text-muted-foreground uppercase font-medium">Estimated Delivery Date</p>
-                 <div className="flex items-center gap-2">
-                    <input 
-                      type="date"
-                      className="border border-border rounded px-3 py-2 font-lato text-sm w-full"
-                      value={order.estimated_delivery_date ? new Date(order.estimated_delivery_date).toISOString().split('T')[0] : ""}
-                      onChange={async (e) => {
-                         const date = e.target.value; // YYYY-MM-DD
-                         if (!date) return;
-                         // Save immediately
-                         const res = await updateOrderStatus(order.id, order.order_status, new Date(date).toISOString());
-                         if (res.success) {
-                            toast.success("Estimated delivery date updated");
-                            loadOrder();
-                         } else {
-                            toast.error("Failed to update date");
-                         }
-                      }}
-                    />
-                 </div>
-                 <p className="text-xs text-muted-foreground">
-                    Setting this will display the date to the customer.
-                 </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Left Column: Items & Timeline (Main Content) */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* Order Items */}
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-border flex justify-between items-center bg-gray-50/50">
+              <h2 className="text-lg font-tenor text-foreground">Order Items</h2>
+              <span className="text-xs font-mono text-muted-foreground bg-white border rounded px-2 py-1">
+                ID: {order.id.slice(0, 8)}...
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b border-border">
+                    <TableHead className="font-tenor text-xs uppercase tracking-wider pl-6">Product</TableHead>
+                    <TableHead className="font-tenor text-xs uppercase tracking-wider">Variant / Size</TableHead>
+                    <TableHead className="font-tenor text-xs uppercase tracking-wider text-center">Qty</TableHead>
+                    <TableHead className="font-tenor text-xs uppercase tracking-wider text-right">Price</TableHead>
+                    <TableHead className="font-tenor text-xs uppercase tracking-wider text-right pr-6">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((item) => {
+                    const product = productMap[item.product_id];
+                    return (
+                      <TableRow key={item.id} className="border-b border-border/50 hover:bg-slate-50/50">
+                        <TableCell className="font-lato font-medium text-foreground pl-6">
+                           <div className="flex items-center gap-2">
+                             <span>{product?.name || item.product_id}</span>
+                             {order.is_preorder && <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">PREORDER</span>}
+                           </div>
+                        </TableCell>
+                        <TableCell className="font-lato text-muted-foreground text-sm">{item.metadata?.size || item.variant_id || '-'}</TableCell>
+                        <TableCell className="font-lato text-center">{item.quantity}</TableCell>
+                        <TableCell className="font-lato text-right text-muted-foreground">₹{item.unit_price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-lato font-medium text-foreground pr-6">₹{(item.quantity * item.unit_price).toFixed(2)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableRow className="bg-gray-50/30 font-lato">
+                    <TableCell colSpan={4} className="text-right font-medium text-muted-foreground pt-4 pb-2">Subtotal</TableCell>
+                    <TableCell className="text-right font-medium pt-4 pb-2 pr-6">₹{(order.total_amount || order.total || 0).toFixed(2)}</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-gray-50/30 font-lato border-0">
+                    <TableCell colSpan={4} className="text-right font-medium text-muted-foreground py-2">Shipping</TableCell>
+                    <TableCell className="text-right font-medium py-2 pr-6">Free</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-gray-50/50 font-lato border-t border-border">
+                    <TableCell colSpan={4} className="text-right font-bold text-foreground py-4">Total</TableCell>
+                    <TableCell className="text-right font-bold text-foreground py-4 pr-6 text-lg">₹{(order.total_amount || order.total || 0).toFixed(2)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          {timeline.length > 0 && (
+            <div className="bg-white rounded-xl border border-border shadow-sm p-6">
+              <div className="flex items-center gap-3 mb-6">
+                 <h2 className="text-lg font-tenor text-foreground">Timeline</h2>
+                 <div className="h-px bg-border flex-1"></div>
+              </div>
+              <div className="relative border-l-2 border-slate-100 ml-3 space-y-8 pl-8 py-2">
+                {timeline.map((event, index) => (
+                  <div key={event.id || index} className="relative">
+                    <span className={`absolute -left-[41px] flex items-center justify-center w-6 h-6 rounded-full border-2 ring-4 ring-white ${
+                        index === 0 ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'
+                    }`}>
+                      {index === 0 && <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>}
+                    </span>
+                    <div>
+                      <h3 className={`text-sm font-semibold mb-1 ${index === 0 ? 'text-blue-700' : 'text-foreground'}`}>
+                        {humanizeStatus(event.status)}
+                      </h3>
+                      <time className="block text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        {new Date(event.created_at).toLocaleString('en-IN', {
+                          weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        })}
+                      </time>
+                      {event.payload?.estimated_delivery_date && (
+                         <div className="mt-2 text-xs bg-blue-50 text-blue-700 px-2 py-1.5 rounded border border-blue-100 inline-block">
+                            Updated Delivery Estimate: {new Date(event.payload.estimated_delivery_date).toLocaleDateString()}
+                         </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Admin Actions & details (Sidebar) */}
+        <div className="space-y-6">
+          
+          {/* Admin Actions Card */}
+          <div className="bg-white rounded-xl border border-border shadow-sm p-6 sticky top-6 z-10 transition-shadow hover:shadow-md">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 font-tenor">Order Actions</h2>
+            <div className="space-y-6">
+               <div className="space-y-2">
+                 <label className="text-xs font-semibold text-foreground">Order Status</label>
+                 <Select 
+                      value={order.order_status} 
+                      onValueChange={handleStatusChangeRequest}
+                      disabled={order.order_status === 'DELIVERED' || order.order_status === 'CANCELLED'}
+                    >
+                    <SelectTrigger className="w-full font-lato">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                      <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                      <SelectItem value="DELIVERED">Delivered</SelectItem>
+                      <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                    </SelectContent>
+                 </Select>
                </div>
+
+               <Separator />
+
+               <div className="space-y-2">
+                 <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                    <span>Estimated Delivery</span>
+                    {order.estimated_delivery_date && <span className="text-[10px] text-green-600 font-normal">Active</span>}
+                 </label>
+                 <input 
+                       type="date"
+                       className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-lato"
+                       value={order.estimated_delivery_date ? new Date(order.estimated_delivery_date).toISOString().split('T')[0] : ""}
+                       onChange={async (e) => {
+                          const date = e.target.value; // YYYY-MM-DD
+                          if (!date) return;
+                          toast.promise(
+                            updateOrderStatus(order.id, order.order_status, new Date(date).toISOString()).then(res => {
+                                if (res.success) loadOrder();
+                                else throw new Error("Failed");
+                            }),
+                            {
+                                loading: 'Updating estimate...',
+                                success: 'Estimated delivery date updated',
+                                error: 'Failed to update date'
+                            }
+                          );
+                       }}
+                    />
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Visible to customer on their order page.
+                  </p>
+               </div>
+            </div>
+          </div>
+
+          {/* Customer & Address Combined */}
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+             <div className="p-4 border-b border-border bg-gray-50/50">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground font-tenor">Customer</h2>
+             </div>
+             <div className="p-5 space-y-6">
+                <div className="flex items-start gap-3">
+                   <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5 text-slate-500" />
+                   </div>
+                   <div>
+                      <p className="font-medium text-foreground">{order.customer_name}</p>
+                      <a href={`mailto:${order.customer_email}`} className="text-sm text-blue-600 hover:underline block">{order.customer_email}</a>
+                      <p className="text-sm text-muted-foreground">{order.customer_phone}</p>
+                   </div>
+                </div>
+
+                <Separator />
+
+                <div className="flex items-start gap-3">
+                   <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5 text-slate-500" />
+                   </div>
+                   <div className="text-sm text-foreground space-y-0.5">
+                      <p className="font-medium mb-1">Shipping Address</p>
+                      {order.shipping_address ? (
+                         <>
+                            <p>{order.shipping_address.street}</p>
+                            <p>{order.shipping_address.city}, {order.shipping_address.state}</p>
+                            <p>{order.shipping_address.pincode}</p>
+                            <p>{order.shipping_address.country || "India"}</p>
+                         </>
+                      ) : (
+                         <p className="text-muted-foreground italic">No address provided</p>
+                      )}
+                   </div>
+                </div>
              </div>
           </div>
 
-        {/* Customer Information */}
-        <div className="bg-white rounded-lg border border-border p-6 space-y-4">
-          <div>
-            <h2 className="text-lg font-tenor text-foreground mb-4">Customer Information</h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Name</p>
-                <p className="font-lato">{order.customer_name}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Email</p>
-                <p className="font-lato text-sm break-all">{order.customer_email}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Phone</p>
-                <p className="font-lato">{order.customer_phone}</p>
-              </div>
-              {order.user_id && (
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase font-medium">User ID</p>
-                  <p className="font-lato text-xs break-all">{order.user_id}</p>
+          {/* Payment Info */}
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+             <div className="p-4 border-b border-border bg-gray-50/50">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground font-tenor">Payment</h2>
+             </div>
+             <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                   <span className="text-sm text-muted-foreground">Status</span>
+                   <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                      order.payment_status === 'PAID' ? 'bg-green-100 text-green-800' :
+                      order.payment_status === 'FAILED' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {order.payment_status || 'PENDING'}
+                   </span>
                 </div>
-              )}
-            </div>
+                
+                {order.razorpay_payment_id && (
+                    <div className="pt-2">
+                       <p className="text-xs text-muted-foreground mb-1 uppercase">Payment ID</p>
+                       <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded px-2 py-1.5">
+                          <CreditCard className="w-3 h-3 text-slate-400" />
+                          <code className="text-xs font-mono text-foreground flex-1 truncate">{order.razorpay_payment_id}</code>
+                          <button 
+                             onClick={() => {
+                                navigator.clipboard.writeText(order.razorpay_payment_id!);
+                                toast.success("Copied");
+                             }}
+                             className="text-slate-400 hover:text-blue-600"
+                          >
+                             <Copy className="w-3 h-3" />
+                          </button>
+                       </div>
+                    </div>
+                )}
+             </div>
           </div>
-        </div>
 
-        {/* Payment Information */}
-        <div className="bg-white rounded-lg border border-border p-6 space-y-4">
-          <div>
-            <h2 className="text-lg font-tenor text-foreground mb-4">Payment Information</h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase font-medium">Status</p>
-                <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                  order.payment_status === 'PAID' ? 'bg-green-100 text-green-800' :
-                  order.payment_status === 'FAILED' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {order.payment_status || 'PENDING'}
-                </span>
-              </div>
-              {order.razorpay_payment_id && (
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase font-medium">Payment ID</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-lato text-xs font-mono bg-slate-50 p-1 rounded border">{order.razorpay_payment_id}</p>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => {
-                      navigator.clipboard.writeText(order.razorpay_payment_id!);
-                      toast.success("Copied");
-                    }}>
-                      <span className="sr-only">Copy</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {order.razorpay_order_id && (
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase font-medium">Razorpay Order ID</p>
-                  <p className="font-lato text-xs font-mono">{order.razorpay_order_id}</p>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Order History Timeline */}
-      {timeline.length > 0 && (
-        <div className="bg-white rounded-lg border border-border p-6">
-          <h2 className="text-lg font-tenor text-foreground mb-4">Order History</h2>
-          <div className="relative border-l border-gray-200 ml-3 space-y-6">
-            {timeline.map((event, index) => (
-              <div key={event.id || index} className="mb-6 ml-6 relative">
-                <span className="absolute flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full -left-9 ring-4 ring-white">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                </span>
-                <h3 className="flex items-center mb-1 text-sm font-semibold text-gray-900">
-                  {humanizeStatus(event.status)}
-                </h3>
-                <time className="block mb-2 text-xs font-normal leading-none text-gray-400">
-                  {new Date(event.created_at).toLocaleString('en-IN', {
-                    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                  })}
-                </time>
-                {/* <p className="mb-4 text-xs font-normal text-gray-500">
-                  Status changed to {humanizeStatus(event.status)}
-                </p> */}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Shipping Address */}
-      {order.shipping_address && (
-        <div className="bg-white rounded-lg border border-border p-6">
-          <h2 className="text-lg font-tenor text-foreground mb-4">Shipping Address</h2>
-          <div className="text-sm font-lato space-y-1 text-foreground">
-            <p>{order.shipping_address.street || ""}</p>
-            <p>
-              {order.shipping_address.city}, {order.shipping_address.state}{" "}
-              {order.shipping_address.pincode}
-            </p>
-            <p>{order.shipping_address.country || "India"}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Order Items */}
-      <div className="bg-white rounded-lg border border-border overflow-hidden">
-        <div className="p-6 border-b border-border">
-          <h2 className="text-lg font-tenor text-foreground">Order Items</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead className="font-tenor">Product</TableHead>
-                <TableHead className="font-tenor">Variant / Size</TableHead>
-                <TableHead className="font-tenor">Quantity</TableHead>
-                <TableHead className="font-tenor">Unit Price</TableHead>
-                <TableHead className="font-tenor text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => {
-                const product = productMap[item.product_id];
-                return (
-                  <TableRow key={item.id} className="border-b border-border">
-                    <TableCell className="font-lato">{product?.name || item.product_id}</TableCell>
-                    <TableCell className="font-lato">{item.metadata?.size || item.variant_id || '-'}</TableCell>
-                    <TableCell className="font-lato">{item.quantity}</TableCell>
-                    <TableCell className="font-lato">₹{item.unit_price.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-lato">₹{(item.quantity * item.unit_price).toFixed(2)}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      {/* Confirmation Dialog (Preserved) */}
+      <AlertDialog open={!!statusToUpdate} onOpenChange={(open) => !open && setStatusToUpdate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {doubleConfirm ? <AlertCircle className="text-red-600" /> : <AlertCircle className="text-amber-600" />}
+              {doubleConfirm ? "Critical Warning" : "Confirm Status Change"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="pt-2">
+              {doubleConfirm ? (
+                <div className="bg-red-50 p-4 rounded-md border border-red-100 text-red-800 text-sm space-y-2">
+                  <p className="font-semibold">You are about to force a status change to {statusToUpdate}.</p>
+                  <p>This action might be inconsistent with the normal order flow or payment status. Please confirm you are absolutely sure.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p>
+                    Are you sure you want to change the order status from <span className="font-semibold text-foreground">{order.order_status}</span> to <span className="font-semibold text-foreground">{statusToUpdate}</span>?
+                  </p>
+                  {isBackwardStatusChange(order.order_status, statusToUpdate!) && (
+                    <p className="text-amber-600 text-sm bg-amber-50 p-2 rounded border border-amber-100">
+                      Warning: You are moving the status backwards. This usually requires double confirmation.
+                    </p>
+                  )}
+                  {statusToUpdate === 'CANCELLED' && (
+                     <p className="text-amber-600 text-sm bg-amber-50 p-2 rounded border border-amber-100">
+                      Warning: Cancelling an order handles inventory and status, but refunds must be processed manually via Razorpay dashboard if applicable.
+                    </p>
+                  )}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDoubleConfirm(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault(); 
+                confirmStatusChange();
+              }}
+              className={doubleConfirm ? "bg-red-600 hover:bg-red-700 text-white" : ""}
+            >
+              {doubleConfirm ? "Yes, Force Update" : "Confirm Change"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
