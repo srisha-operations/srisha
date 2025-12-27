@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Loader } from "@/components/ui/loader";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
@@ -6,7 +7,7 @@ import { getCurrentUser } from "@/services/auth";
 import { listCart } from "@/services/cart";
 import { createOrder, createPreorder, getShopMode } from "@/services/checkout";
 import { clearCart } from "@/services/cart";
-import { initiatePayment } from "@/services/payment";
+import { initiatePayment, verifyPayment } from "@/services/payment";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -199,13 +200,19 @@ const Checkout = () => {
       }
       setErrors({});
 
-      const orderItems = items.map((item) => ({
-        product_id: item.id,
-        variant_id: item.cartMeta?.variant_id || null,
-        quantity: item.cartMeta?.quantity || 1,
-        unit_price: item.price || 0,
-        metadata: { size: item.cartMeta?.size || null },
-      }));
+      const orderItems = items.map((item) => {
+        const variantId = item.cartMeta?.variant_id;
+        const variant = (item.product_variants || []).find((v: any) => v.id === variantId);
+        const size = variant ? variant.size : null;
+
+        return {
+          product_id: item.id,
+          variant_id: variantId || null,
+          quantity: item.cartMeta?.quantity || 1,
+          unit_price: item.price || 0,
+          metadata: { size: size },
+        };
+      });
 
       // Phase 1: Async operations (backend calls)
       // These break the user gesture, but we complete all of them first
@@ -222,7 +229,11 @@ const Checkout = () => {
         user?.id
       );
 
-      toast({ title: `Order created!`, description: `Order #${result.orderNumber}. Initiating payment...`, duration: 4000 });
+      toast({ 
+        title: `Order created!`, 
+        description: `Your items have been moved to Order #${result.orderNumber}. Initiating payment...`, 
+        duration: 4000 
+      });
 
       // Clear the cart so the UI shows no items
       try {
@@ -233,140 +244,161 @@ const Checkout = () => {
 
       // Initiate payment via backend service
       // The backend will create payment intent and return safe data
-      console.log("Razorpay script loaded:", typeof (window as any).Razorpay);
+      // The backend will create payment intent and return safe data
       
-      const paymentResult = await initiatePayment({
-        orderId: result.orderId,
-        orderNumber: result.orderNumber,
-        amount: total,
-        customerEmail: shipping.email || user?.email || "",
-        customerName: shipping.name,
-        customerPhone: shipping.phone,
-      });
+      try {
+        const paymentResult = await initiatePayment({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber,
+          amount: total,
+          customerEmail: shipping.email || user?.email || "",
+          customerName: shipping.name,
+          customerPhone: shipping.phone,
+        });
 
-      console.log("Payment initiation response:", paymentResult);
 
-      // Phase 2: Synchronous Razorpay modal opening
-      // This MUST happen immediately without any awaits or state updates
-      // to preserve the user gesture and allow the modal to open
-      
-      // Robustness fix: Backend might return 'razorpayKeyId' or just 'keyId' depending on version
-      const keyId = paymentResult.razorpayKeyId || (paymentResult as any).keyId;
 
-      if (paymentResult.razorpayOrderId && keyId) {
-        // Defensive check: ensure Razorpay script is loaded
-        const RazorpayClass = (window as any).Razorpay;
-        if (!RazorpayClass) {
-          console.error("Razorpay script not loaded. Window.Razorpay is undefined.");
-          console.error("Checked at:", new Date().toISOString());
-          toast({
-            title: "Payment gateway error",
-            description: "Razorpay is not available. Please reload and try again.",
-            duration: 4000,
-          });
-          setIsSubmitting(false);
-          navigate(`/orders/${result.orderId}`);
-          return;
-        }
+        // Phase 2: Synchronous Razorpay modal opening
+        // This MUST happen immediately without any awaits or state updates
+        // to preserve the user gesture and allow the modal to open
+        
+        // Robustness fix: Backend might return 'razorpayKeyId' or just 'keyId' depending on version
+        const keyId = paymentResult.razorpayKeyId || (paymentResult as any).keyId;
 
-        try {
-          // Razorpay checkout options
-          const options = {
-            key: keyId,
-            amount: total * 100, // Amount in paise
-            currency: "INR",
-            name: "SRISHA",
-            description: `Order ${result.orderNumber}`,
-            order_id: paymentResult.razorpayOrderId,
-            customer_notification: 1, // Razorpay will send SMS/email
-            prefill: {
-              name: shipping.name,
-              email: shipping.email || user?.email || "",
-              contact: shipping.phone,
-            },
-            theme: {
-              color: "#000000", // SRISHA brand color
-            },
-            // Callback handlers - ALL navigation happens here, not before
-            handler: function (response: any) {
+        if (paymentResult.razorpayOrderId && keyId) {
+          // Defensive check: ensure Razorpay script is loaded
+          const RazorpayClass = (window as any).Razorpay;
+          if (!RazorpayClass) {
+            console.error("Razorpay script not loaded. Window.Razorpay is undefined.");
+            toast({
+              title: "Payment gateway error",
+              description: "Razorpay is not available. Please retry from Orders page.",
+              duration: 4000,
+            });
+            setIsSubmitting(false);
+            navigate(`/orders/${result.orderId}`);
+            return;
+          }
+
+          try {
+            // Razorpay checkout options
+            const options = {
+              key: keyId,
+              amount: total * 100, // Amount in paise
+              currency: "INR",
+              name: "SRISHA",
+              description: `Order ${result.orderNumber}`,
+              order_id: paymentResult.razorpayOrderId,
+              customer_notification: 1, // Razorpay will send SMS/email
+              prefill: {
+                name: shipping.name,
+                email: shipping.email || user?.email || "",
+                contact: shipping.phone,
+              },
+              theme: {
+                color: "#000000", // SRISHA brand color
+              },
+                modal: {
+                  ondismiss: function() {
+                    toast({
+                      title: "Payment cancelled",
+                      description: "You can complete payment later from your orders.",
+                      duration: 4000,
+                    });
+                    setIsSubmitting(false);
+                    navigate(`/orders/${result.orderId}`);
+                  }
+                },
+                // Callback handlers - ALL navigation happens here, not before
+                handler: async function (response: any) {
               // This is called after successful payment
-              console.log("Payment successful. Razorpay response:", response);
+              
+              const verification = await verifyPayment(
+                response.razorpay_payment_id,
+                response.razorpay_order_id,
+                response.razorpay_signature,
+                result.orderId
+              );
+
+              if (verification.success) {
+
+                toast({
+                  title: "Payment successful",
+                  description: "Your order has been confirmed.",
+                  duration: 4000,
+                });
+                navigate(`/orders/${result.orderId}`);
+              } else {
+                 console.error("Payment verification failed:", verification.error);
+                 toast({
+                  title: "Payment Warning",
+                  description: "Payment deducted but verification failed. Please check order status.",
+                  variant: "destructive",
+                  duration: 5000,
+                });
+                navigate(`/orders/${result.orderId}`);
+              }
+              
+              setIsSubmitting(false);
+            },
+            };
+
+
+            
+            // Create Razorpay instance
+            const checkout = new RazorpayClass(options);
+
+            // Handle payment failure
+            checkout.on("payment.failed", function (response: any) {
+              console.error("Payment failed. Razorpay error:", response.error);
               toast({
-                title: "Payment successful",
-                description: "Your order has been confirmed.",
+                title: "Payment failed",
+                description: "Please try again or contact support.",
                 duration: 4000,
               });
+              // Navigate to order page - order still exists
               setIsSubmitting(false);
               navigate(`/orders/${result.orderId}`);
-            },
-          };
+            });
 
-          console.log("Creating Razorpay checkout with options:", JSON.stringify(options, null, 2));
-          
-          // Create Razorpay instance
-          const checkout = new RazorpayClass(options);
-          console.log("Razorpay checkout instance created successfully");
-
-          // Handle payment failure
-          checkout.on("payment.failed", function (response: any) {
-            console.error("Payment failed. Razorpay error:", response.error);
+            // CRITICAL: checkout.open() must be called synchronously here
+            checkout.open();
+            
+          } catch (error) {
+            console.error("Error creating/opening Razorpay checkout:", error);
             toast({
-              title: "Payment failed",
-              description: "Please try again or contact support.",
+              title: "Payment error",
+              description: "Failed to open payment modal. Please try again from Orders page.",
               duration: 4000,
             });
-            // Navigate to order page - order still exists
             setIsSubmitting(false);
             navigate(`/orders/${result.orderId}`);
-          });
-
-          // Handle modal dismissal (user closes without paying)
-          checkout.on("payment.dismiss", function () {
-            console.log("Payment modal dismissed by user");
-            toast({
-              title: "Payment cancelled",
-              description: "You can complete payment later from your orders.",
-              duration: 4000,
-            });
-            // Navigate to order page - order still exists
-            setIsSubmitting(false);
-            navigate(`/orders/${result.orderId}`);
-          });
-
-          console.log("About to call checkout.open()...");
-          // CRITICAL: checkout.open() must be called synchronously here
-          // in the same execution context as the user gesture
-          // NO awaits, NO state updates, NO navigation before this point
-          checkout.open();
-          console.log("checkout.open() called successfully");
-          
-          // NOTE: Do NOT set setIsSubmitting(false) here
-          // Keep it true until a callback fires (handler, payment.failed, payment.dismiss)
-          // Those callbacks will reset it when they navigate
-        } catch (error) {
-          console.error("Error creating/opening Razorpay checkout:", error);
-          console.error("Error stack:", (error as any).stack);
+          }
+        } else {
+          // Fallback if Razorpay details not available
+          console.warn("Razorpay payment details not available:", paymentResult);
           toast({
-            title: "Payment error",
-            description: "Failed to open payment modal. Please try again.",
+            title: "Order Placed",
+            description: `Order #${result.orderNumber} saved. Please pay via 'My Orders'.`,
             duration: 4000,
           });
           setIsSubmitting(false);
           navigate(`/orders/${result.orderId}`);
         }
-      } else {
-        // Fallback if Razorpay details not available
-        console.warn("Razorpay payment details not available:", paymentResult);
-        console.warn("Expected razorpayOrderId and razorpayKeyId in response");
+      } catch (paymentError) {
+        console.error("Payment initiation failed:", paymentError);
+        // CRITICAL: Do NOT let this bubble up to the order creation catch block
+        // The order IS created, only payment failed.
         toast({
-          title: "Payment initiated",
-          description: `Order #${result.orderNumber} is ready. Waiting for payment confirmation...`,
+          title: "Order Placed",
+          description: "Payment initialization failed. Please try paying from 'My Orders'.",
           duration: 4000,
         });
         setIsSubmitting(false);
         navigate(`/orders/${result.orderId}`);
       }
     } catch (e) {
+      // This catch block is NOW ONLY for order creation errors
       console.error("Order creation failed:", e);
       toast({ title: "Failed to create order", description: (e as any).message || "Please try again." });
       setIsSubmitting(false);
@@ -374,7 +406,7 @@ const Checkout = () => {
   };
 
 
-  if (loading) return <div className="pt-24">Loading...</div>;
+  if (loading) return <Loader fullScreen />;
 
   return (
     <div className="w-full min-h-screen bg-background">
