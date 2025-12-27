@@ -14,16 +14,20 @@
     "final_cta": "SHOP NOW",
     "blocks": {
       "portrait_left": {
-        "title": "Timeless Elegance",
-        "caption": "Each piece in our collection tells a story of craftsmanship and dedication. We believe in creating garments that transcend trends and become cherished heirlooms for generations to come."
+        "title": "Artistry in Every Stitch",
+        "caption": "From the initial sketch to the final steam, our artisans pour their heart into every garment. SRISHA represents not just fashion, but a legacy of meticulous craftsmanship.",
+        "image": "https://xvatizmdsnsstumjhxxg.supabase.co/storage/v1/object/public/srisha/gallery/gallery-43-2.JPG",
+        "alt": "Left Image"
       },
       "three_grid": {
-        "title": "Heritage & Innovation",
-        "caption": "Drawing inspiration from traditional techniques while embracing modern aesthetics, our designs celebrate the perfect balance between heritage and contemporary style."
+        "title": "The Collection",
+        "caption": "Explore silhouettes that define modern grace."
       },
       "portrait_right": {
-        "title": "Heritage & Innovation",
-        "caption": "Drawing inspiration from traditional techniques while embracing modern aesthetics, our designs celebrate the perfect balance between heritage and contemporary style."
+        "title": "Modern Heritage",
+        "caption": "We bridge the gap between traditional Indian aesthetics and contemporary global trends. Our designs are strictly limited edition, ensuring exclusivity for our patrons.",
+        "image": "https://xvatizmdsnsstumjhxxg.supabase.co/storage/v1/object/public/srisha/gallery/gallery-43-1.JPEG",
+        "alt": "Right Image"
       }
     }
   },
