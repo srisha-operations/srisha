@@ -295,16 +295,14 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
           {desc.details && Object.keys(desc.details).length > 0 && (
             <div className="space-y-2 mt-4">
               <h4 className="font-medium text-foreground">Product Details:</h4>
-              <ul className="space-y-1">
+              <div className="grid grid-cols-[140px_1fr] gap-y-2 gap-x-4 text-sm mt-4">
                 {Object.entries(desc.details).map(([key, value]) => (
-                  <li key={key} className="flex gap-2">
-                    <span className="font-medium text-foreground min-w-[100px]">
-                      {key}:
-                    </span>
-                    <span>{value as string}</span>
-                  </li>
+                  <div key={key} className="contents">
+                    <div className="font-medium text-foreground">{key}:</div>
+                    <div className="text-muted-foreground">{value as string}</div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>
