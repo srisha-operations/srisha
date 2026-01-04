@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import OrdersPage from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
+import UpdatePassword from "./pages/UpdatePassword";
 
 // Admin pages
 import AdminSignin from "./pages/Admin/Login/AdminLogin";
@@ -101,6 +102,7 @@ const App = () => (
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
+        <Route path="/auth/update-password" element={<UpdatePassword />} />
 
         {/* admin auth */}
         <Route path="/admin/signin" element={<AdminSignin />} />

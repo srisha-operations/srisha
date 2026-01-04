@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 
 interface SEOProps {
   title: string;
@@ -8,32 +8,31 @@ interface SEOProps {
 }
 
 const SEO = ({ title, description, image, url }: SEOProps) => {
-  useEffect(() => {
-    // Update Title
-    document.title = `${title} | SRISHA`;
+  const siteName = "SRISHA";
+  const defaultDescription = "Discover luxury ethnic wear and contemporary fashion.";
+  const fullTitle = `${title} | ${siteName}`;
 
-    // Update Meta Tags
-    const updateMeta = (name: string, content: string | undefined) => {
-      if (!content) return;
-      let element = document.querySelector(`meta[name="${name}"]`) || document.querySelector(`meta[property="${name}"]`);
-      
-      if (!element) {
-        element = document.createElement('meta');
-        element.setAttribute(name.startsWith('og:') ? 'property' : 'name', name);
-        document.head.appendChild(element);
-      }
-      element.setAttribute('content', content);
-    };
+  return (
+    <Helmet>
+      {/* Basic */}
+      <title>{fullTitle}</title>
+      <meta name="description" content={description || defaultDescription} />
 
-    updateMeta('description', description);
-    updateMeta('og:title', title);
-    updateMeta('og:description', description);
-    updateMeta('og:image', image);
-    updateMeta('og:url', url || window.location.href);
+      {/* Open Graph */}
+      <meta property="og:title" content={fullTitle} />
+      <meta property="og:description" content={description || defaultDescription} />
+      <meta property="og:image" content={image || ""} />
+      <meta property="og:url" content={url || window.location.href} />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content={siteName} />
 
-  }, [title, description, image, url]);
-
-  return null;
+      {/* Twitter (optional but good for sharing) */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={fullTitle} />
+      <meta name="twitter:description" content={description || defaultDescription} />
+      <meta name="twitter:image" content={image || ""} />
+    </Helmet>
+  );
 };
 
 export default SEO;

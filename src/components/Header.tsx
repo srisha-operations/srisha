@@ -187,6 +187,7 @@ const Header = () => {
     setUser(null);
     setWishlistCount(0);
     setCartCount(0);
+    window.location.reload();
   };
 
   // Called after a successful auth (sign in / sign up) to merge local data

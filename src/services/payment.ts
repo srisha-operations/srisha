@@ -159,6 +159,17 @@ export const verifyPayment = async (
       return { success: false, error: data.error || `Server Error: ${response.status} ${response.statusText}` };
     }
 
+    // Attempt to update status on client-side to ensure immediate UI feedback
+    // This addresses the issue where backend webhook/edge-function might lag or fail to set CONFIRMED
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({ order_status: "CONFIRMED", payment_status: "PAID" })
+      .eq("id", orderId);
+
+    if (updateError) {
+      console.warn("Client-side status update failed (likely RLS), relying on backend:", updateError);
+    }
+
     return { success: true };
   } catch (e) {
     console.error("verifyPayment Exception:", e);
