@@ -10,6 +10,7 @@ const AdminDashboard = () => {
   const [usersCount, setUsersCount] = useState<number | null>(null);
   const [pendingShipments, setPendingShipments] = useState<number | null>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ const AdminDashboard = () => {
         const { data: ordersData, error: ordersErr } = await supabase
           .from("orders")
           .select("id, total_amount, created_at, order_status, payment_status, order_number, customer_name")
-          .order("created_at", { ascending: false }); // Get all for counts, but could limit if too large
+          .order("created_at", { ascending: false });
 
         if (ordersErr) console.warn("orders fetch failed", ordersErr);
 
@@ -50,10 +51,36 @@ const AdminDashboard = () => {
 
         // Users (best-effort)
         let userCount = null;
-           const { count: uCount } = await supabase.from("users").select("id", { count: 'exact', head: true });
-           userCount = uCount;
+        const { count: uCount } = await supabase.from("users").select("id", { count: 'exact', head: true });
+        userCount = uCount;
 
+        // Top Selling Products Calculation
+        const { data: itemsData, error: itemsErr } = await supabase
+          .from("order_items")
+          .select("product_id, quantity, product:products(name, product_code)")
+          .limit(1000); 
+        
+        if (itemsErr) console.warn("order_items fetch failed", itemsErr);
 
+        const productSales: Record<string, { name: string; code: string; quantity: number }> = {};
+        
+        (itemsData || []).forEach((item: any) => {
+          if (item.product) {
+            const pid = item.product_id;
+            if (!productSales[pid]) {
+              productSales[pid] = {
+                name: item.product.name,
+                code: item.product.product_code,
+                quantity: 0
+              };
+            }
+            productSales[pid].quantity += item.quantity;
+          }
+        });
+
+        const sortedProducts = Object.values(productSales)
+          .sort((a, b) => b.quantity - a.quantity)
+          .slice(0, 5);
 
         if (!mounted) return;
         setOrdersCount(ordCount);
@@ -62,6 +89,7 @@ const AdminDashboard = () => {
         setUsersCount(userCount);
         setPendingShipments(pending);
         setRecentOrders(recent);
+        setTopProducts(sortedProducts);
 
       } catch (e: any) {
         console.error("dashboard load failed", e);
@@ -109,57 +137,91 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Orders */}
-      <Card className="overflow-hidden border-border">
-        <div className="p-6 border-b border-border bg-slate-50">
-          <h3 className="text-lg font-tenor text-foreground">Recent Activity</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-white border-b border-border text-muted-foreground font-tenor uppercase text-xs">
-              <tr>
-                <th className="px-6 py-3">Order #</th>
-                <th className="px-6 py-3">Customer</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3">Payment</th>
-                <th className="px-6 py-3">Amount</th>
-                <th className="px-6 py-3">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-white">
-              {recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 font-medium font-lato">{order.order_number}</td>
-                  <td className="px-6 py-4 font-lato">{order.customer_name}</td>
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
-                      {order.order_status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                     <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        order.payment_status === 'PAID' ? 'bg-green-100 text-green-800' :
-                        order.payment_status === 'FAILED' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {order.payment_status || 'PENDING'}
-                      </span>
-                  </td>
-                  <td className="px-6 py-4 font-lato font-semibold">₹{(order.total_amount || 0).toLocaleString('en-IN')}</td>
-                  <td className="px-6 py-4 text-muted-foreground font-lato">
-                    {new Date(order.created_at).toLocaleDateString("en-IN", { month: 'short', day: 'numeric' })}
-                  </td>
-                </tr>
-              ))}
-              {recentOrders.length === 0 && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Recent Orders */}
+        <Card className="overflow-hidden border-border">
+          <div className="p-6 border-b border-border bg-slate-50">
+            <h3 className="text-lg font-tenor text-foreground">Recent Activity</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-white border-b border-border text-muted-foreground font-tenor uppercase text-xs">
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No recent orders found</td>
+                  <th className="px-6 py-3">Order #</th>
+                  <th className="px-6 py-3">Customer</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Payment</th>
+                  <th className="px-6 py-3">Amount</th>
+                  <th className="px-6 py-3">Date</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+              </thead>
+              <tbody className="divide-y divide-border bg-white">
+                {recentOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium font-lato">{order.order_number}</td>
+                    <td className="px-6 py-4 font-lato">{order.customer_name}</td>
+                    <td className="px-6 py-4">
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+                        {order.order_status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                       <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          order.payment_status === 'PAID' ? 'bg-green-100 text-green-800' :
+                          order.payment_status === 'FAILED' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {order.payment_status || 'PENDING'}
+                        </span>
+                    </td>
+                    <td className="px-6 py-4 font-lato font-semibold">₹{(order.total_amount || 0).toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-4 text-muted-foreground font-lato">
+                      {new Date(order.created_at).toLocaleDateString("en-IN", { month: 'short', day: 'numeric' })}
+                    </td>
+                  </tr>
+                ))}
+                {recentOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No recent orders found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Top Products */}
+        <Card className="overflow-hidden border-border">
+          <div className="p-6 border-b border-border bg-slate-50">
+            <h3 className="text-lg font-tenor text-foreground">Top Selling Products</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-white border-b border-border text-muted-foreground font-tenor uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-3">Product Name</th>
+                  <th className="px-6 py-3">Code</th>
+                  <th className="px-6 py-3">Units Sold</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border bg-white">
+                {topProducts.map((p, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium font-lato">{p.name || "Unknown"}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{p.code || "—"}</td>
+                    <td className="px-6 py-4 font-bold">{p.quantity}</td>
+                  </tr>
+                ))}
+                {topProducts.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">No sales data available</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };

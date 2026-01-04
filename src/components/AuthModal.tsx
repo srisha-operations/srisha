@@ -10,15 +10,14 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Separator } from "./ui/separator";
 import { X } from "lucide-react";
-import { signIn, signUp } from "@/services/auth";
+import { signIn, signUp, resetPasswordForEmail } from "@/services/auth";
 import { toast } from "sonner";
 
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultView?: "signin" | "signup";
+  defaultView?: "signin" | "signup" | "forgot_password";
   onAuthSuccess?: (user: any) => void;
   onAfterAuthSuccess?: () => void;
 }
@@ -47,7 +46,7 @@ const AuthModal = ({
     e.preventDefault();
     setIsLoading(true);
 
-    // Basic Validation
+    // Basic Validation for Email
     if (!formData.email.includes("@") || !formData.email.includes(".")) {
       toast.error("Invalid Email", {
         description: "Please enter a valid email address.",
@@ -56,24 +55,30 @@ const AuthModal = ({
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error("Password too short", {
-        description: "Password must be at least 6 characters long.",
-      });
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      let user;
-      if (view === "signup") {
+      if (view === "forgot_password") {
+        await resetPasswordForEmail(formData.email);
+        toast.success("Reset Link Sent", {
+          description: "Check your email for the password reset link.",
+        });
+        // Close modal or switch to signin
+        onOpenChange(false);
+      } else if (view === "signup") {
         if (!formData.name.trim()) {
           toast.error("Name required", { description: "Please enter your full name." });
           setIsLoading(false);
           return;
         }
         
-        user = await signUp(
+        if (formData.password.length < 6) {
+          toast.error("Password too short", {
+             description: "Password must be at least 6 characters long.",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        await signUp(
           formData.name,
           formData.email,
           formData.phone,
@@ -82,40 +87,47 @@ const AuthModal = ({
         toast.success("Signup successful!", {
           description: "Check your email to confirm your account.",
         });
+        setFormData({ name: "", email: "", phone: "", password: "" });
+        onOpenChange(false);
       } else {
-        user = await signIn(formData.email, formData.password);
+        // Sign In
+        const user = await signIn(formData.email, formData.password);
 
         onAuthSuccess?.({
-          name: user.user_metadata?.name || user.email.split("@")[0],
+          name: user.user_metadata?.name || user.email?.split("@")[0],
           email: user.email,
         });
 
         toast.success("Welcome back!", {
           description: `Signed in as ${user.email}`,
         });
-      }
 
-      setFormData({ name: "", email: "", phone: "", password: "" });
-      onOpenChange(false);
-      
-      // Execute pending action callback (e.g., sync cart/wishlist)
-      if (onAfterAuthSuccess) {
-        setTimeout(() => {
-          onAfterAuthSuccess();
-        }, 100);
+        setFormData({ name: "", email: "", phone: "", password: "" });
+        onOpenChange(false);
+        
+        if (onAfterAuthSuccess) {
+          setTimeout(() => {
+            onAfterAuthSuccess();
+          }, 100);
+        }
       }
     } catch (err: any) {
       console.error("Auth error:", err);
       let msg = err.message || "Authentication failed";
       
-      // Map Supabase errors to user-friendly messages
+      // Map Supabase errors
       if (msg.includes("User already registered")) msg = "User already exists. Please sign in instead.";
       if (msg.includes("Invalid login credentials")) msg = "Invalid email or password.";
       if (msg.includes("rate limit")) msg = "Too many attempts. Please try again later.";
 
-      toast.error(view === "signin" ? "Sign In Failed" : "Sign Up Failed", {
-        description: msg,
-      });
+      toast.error(
+        view === "signin" 
+          ? "Sign In Failed" 
+          : view === "signup" 
+            ? "Sign Up Failed"
+            : "Request Failed", 
+        { description: msg }
+      );
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +143,11 @@ const AuthModal = ({
         <div className="p-6">
           <DialogHeader className="mb-6">
             <DialogTitle className="font-tenor text-2xl text-center">
-              {view === "signin" ? "Sign In" : "Sign Up"}
+              {view === "signin" 
+                ? "Sign In" 
+                : view === "signup" 
+                  ? "Sign Up" 
+                  : "Reset Password"}
             </DialogTitle>
           </DialogHeader>
 
@@ -171,34 +187,63 @@ const AuthModal = ({
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label>Password</Label>
-                <Input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                />
-              </div>
+              {view !== "forgot_password" && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Password</Label>
+                    {view === "signin" && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => setView("forgot_password")}
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                  />
+                </div>
+              )}
 
               <Button className="w-full py-6" type="submit" disabled={isLoading}>
-                {isLoading ? "Loading..." : (view === "signin" ? "Sign In" : "Sign Up")}
+                {isLoading 
+                  ? "Loading..." 
+                  : view === "signin" 
+                    ? "Sign In" 
+                    : view === "signup" 
+                      ? "Sign Up" 
+                      : "Send Reset Link"}
               </Button>
             </form>
 
             <div className="text-center">
-              <button
-                className="text-sm text-muted-foreground"
-                onClick={() =>
-                  setView(view === "signin" ? "signup" : "signin")
-                }
-                disabled={isLoading}
-              >
-                {view === "signin"
-                  ? "New here? Sign Up"
-                  : "Already registered? Sign In"}
-              </button>
+              {view === "forgot_password" ? (
+                <button
+                  className="text-sm text-muted-foreground"
+                  onClick={() => setView("signin")}
+                  disabled={isLoading}
+                >
+                  Back to Sign In
+                </button>
+              ) : (
+                <button
+                  className="text-sm text-muted-foreground"
+                  onClick={() =>
+                    setView(view === "signin" ? "signup" : "signin")
+                  }
+                  disabled={isLoading}
+                >
+                  {view === "signin"
+                    ? "New here? Sign Up"
+                    : "Already registered? Sign In"}
+                </button>
+              )}
             </div>
           </div>
         </div>

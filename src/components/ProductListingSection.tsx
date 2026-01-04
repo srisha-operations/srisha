@@ -99,7 +99,7 @@ const ProductListingSection = () => {
         product_variants (*)
       `
         )
-        .order("product_id", { ascending: false });
+        .order("product_code", { ascending: true });
 
       if (!error && data) {
         const mapped = data.map((p) => {
