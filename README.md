@@ -1,73 +1,120 @@
-# Welcome to your Lovable project
+# SRISHA - Luxury Fashion E-Commerce
 
-## Project info
+SRISHA is a modern, high-performance e-commerce platform built for a luxury fashion brand. It features a stunning storefront for customers and a comprehensive admin dashboard for inventory and order management.
 
-**URL**: https://lovable.dev/projects/84941338-e9e9-4dd6-9948-71a9c4ffb9eb
+![SRISHA Banner](https://xvatizmdsnsstumjhxxg.supabase.co/storage/v1/object/public/srisha/gallery/gallery-43-1.JPEG)
 
-## How can I edit this code?
+## 🌟 Key Features
 
-There are several ways of editing your application.
+### Storefront (Customer Experience)
+- **Luxury Aesthetic**: Brand-focused design with smooth animations and premium typography (`Tenor Sans` & `Lato`).
+- **Product Gallery**: High-fidelity product showcases with size selection (S, M, L) and detailed descriptions.
+- **Dynamic Content**: Gallery and brand stories powered by a dynamic content system (Database + Local Fallback).
+- **Shopping Cart & Wishlist**: Persistent cart and wishlist functionality using local storage and database sync.
+- **Secure Checkout**: Integrated Razorpay payment gateway for secure transactions.
+- **Order Tracking**: Customers can track order status (Confirmed, Dispatched, Delivered) and view estimated delivery dates.
 
-**Use Lovable**
+### Admin Dashboard
+- **Secure Authentication**: Role-based access control (RBAC) ensuring only admins can access the portal.
+- **Order Management**:
+    - View all orders with status filtering.
+    - Update order status (Pending → Confirmed → Dispatched → Delivered).
+    - Set and update **Estimated Delivery Dates**.
+    - View detailed timelines of order events.
+- **Inventory & Analytics**: (Coming Soon) Product management and sales analytics.
+- **Mobile Responsive**: Fully functional admin interface on mobile devices via a responsive Drawer sidebar.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/84941338-e9e9-4dd6-9948-71a9c4ffb9eb) and start prompting.
+## 🛠️ Technology Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: [React](https://react.dev/) + [Vite](https://vitejs.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn UI](https://ui.shadcn.com/) (Radix Primitives)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Backend**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Edge Functions, Storage)
+- **State Management**: React Query (TanStack Query) + Context API
+- **Payments**: [Razorpay](https://razorpay.com/)
+- **Deployment**: Vercel / Netlify (Recommended)
 
-**Use your preferred IDE**
+## 🚀 Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
+- A Supabase project
+- A Razorpay test account
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Installation
 
-Follow these steps:
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/srisha.git
+   cd srisha
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+3. **Environment Setup:**
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+4. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:8080](http://localhost:8080) to view the app.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## 🗄️ Database Setup
 
-**Edit a file directly in GitHub**
+The project uses Supabase. Run the following SQL scripts in your Supabase SQL Editor to set up the schema:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. **Schema Setup**: (Ensure tables for `products`, `orders`, `order_items`, `admins`, `site_content` exist).
+2. **Order Events**:
+   ```sql
+   create table public.order_events (
+     id uuid default gen_random_uuid() primary key,
+     order_id uuid references public.orders(id) not null,
+     status text not null,
+     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+     payload jsonb
+   );
+   ```
+3. **Admins**:
+   ```sql
+   create table public.admins (
+     id uuid references auth.users not null primary key,
+     role text default 'admin'
+   );
+   -- Insert your user ID as admin
+   -- INSERT INTO admins (id, role) VALUES ('your-user-id', 'admin');
+   ```
 
-**Use GitHub Codespaces**
+## 💳 Payment Integration
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+This project uses **Razorpay** for payments.
+- The checkout flow initiates an order via a Supabase Edge Function (`create-razorpay-order`).
+- Verify payments via another Edge Function (`verify-payment`) to ensure security.
 
-## What technologies are used for this project?
+**Edge Functions:**
+- `create-razorpay-order`: Generates an Order ID from Razorpay.
+- `verify-payment`: Validates the `razorpay_signature` on the backend.
 
-This project is built with:
+## 🤝 Contribution
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Fork the Project.
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the Branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
 
-## How can I deploy this project?
+## 📄 License
 
-Simply open [Lovable](https://lovable.dev/projects/84941338-e9e9-4dd6-9948-71a9c4ffb9eb) and click on Share -> Publish.
+Distributed under the MIT License. See `LICENSE` for more information.
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+*Crafted with ❤️ for SRISHA*

@@ -100,7 +100,9 @@ const Footer = () => {
                 </p>
                 <p className="flex items-center gap-2 justify-center md:justify-start">
                   {otherIcons["mail"]}
-                  <span>{footer?.contact.email}</span>
+                  <a href={`mailto:${footer?.contact.email}`} className="hover:underline">
+                    {footer?.contact.email}
+                  </a>
                 </p>
               </div>
             </div>

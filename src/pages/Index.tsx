@@ -7,6 +7,8 @@ import AboutSection from "@/components/AboutSection";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
 
+import SEO from "@/components/SEO";
+
 const Index = () => {
   const [hero, setHero] = useState<any>(null);
   const [gallery, setGallery] = useState<any>(null);
@@ -37,6 +39,10 @@ const Index = () => {
 
   return (
     <div className="w-full">
+      <SEO 
+        title="Home" 
+        description="SRISHA - Discover luxury ethnic wear and contemporary fashion." 
+      />
       <Header />
       
       {/* render hero section only when data loaded */}
