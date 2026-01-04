@@ -28,6 +28,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [cartAdded, setCartAdded] = useState(false);
   const [resolvedProduct, setResolvedProduct] = useState<any>(product);
+  const displayProduct = resolvedProduct || product;
 
   useEffect(() => {
     // load shop mode
@@ -135,9 +136,9 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
     // Determine variant id if variants exist and a size is selected
     let variant_id: string | null = null;
-    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+    const hasVariants = (displayProduct?.product_variants || []).length > 0;
     if (hasVariants) {
-      const v = resolvedProduct.product_variants.find(
+      const v = displayProduct.product_variants.find(
         (x: any) => x.size === selectedSize && x.visible
       );
       if (!v) {
@@ -157,7 +158,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
     // Always add to cart (local for guests). If guest, also prompt auth modal.
     await addToCart(
-      { product_id: resolvedProduct.id, variant_id, quantity: 1 },
+      { product_id: displayProduct.id, variant_id, quantity: 1 },
       user?.id
     );
     window.dispatchEvent(new Event("cartUpdated"));
@@ -188,7 +189,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     }
 
     // Decide shop mode by reading site_content 'shop_settings'
-    const { data: settings, error } = await (
+    const { data: settings } = await (
       await import("@/lib/supabaseClient")
     ).supabase
       .from("site_content")
@@ -199,13 +200,13 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     const mode = settings?.value?.mode || "normal";
 
     // If variants exist, require a selectedSize and validate stock
-    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+    const hasVariants = (displayProduct?.product_variants || []).length > 0;
     if (hasVariants) {
       if (!selectedSize) {
         toast.warning("Please select a size");
         return;
       }
-      const v = resolvedProduct.product_variants.find(
+      const v = displayProduct.product_variants.find(
         (x: any) => x.size === selectedSize && x.visible
       );
       if (!v) {
@@ -221,14 +222,15 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     if (mode === "inquiry") {
       // set cart_items status -> 'inquired' for this user's relevant items
       // add the item if not already in cart, then submit preorder for that product
-      await addToCart(
-        {
-          product_id: resolvedProduct.id,
-          variant_id: hasVariants
-            ? resolvedProduct.product_variants.find(
-                (x: any) => x.size === selectedSize
-              ).id
-            : null,
+    // mode === normal -> add to cart and open CartDrawer
+    await addToCart(
+      {
+        product_id: displayProduct.id,
+        variant_id: hasVariants
+          ? displayProduct.product_variants.find(
+              (x: any) => x.size === selectedSize
+            ).id
+          : null,
           quantity: 1,
         },
         user.id
@@ -245,9 +247,9 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     // mode === normal -> add to cart and open CartDrawer
     await addToCart(
       {
-        product_id: resolvedProduct.id,
+        product_id: displayProduct.id,
         variant_id: hasVariants
-          ? resolvedProduct.product_variants.find(
+          ? displayProduct.product_variants.find(
               (x: any) => x.size === selectedSize
             ).id
           : null,
@@ -265,7 +267,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
   const sizes = Array.from(
     new Set(
-      (resolvedProduct?.product_variants || [])
+      (displayProduct?.product_variants || [])
         .map((v: any) => v.size)
         .filter(Boolean)
     )
@@ -273,7 +275,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
   // Helper to parse description
   const renderDescription = () => {
-    const desc = resolvedProduct.description;
+    const desc = displayProduct.description;
 
     // If it's a simple string (legacy or plain text)
     if (typeof desc === "string") {
@@ -431,15 +433,15 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
             <div className="p-6 lg:p-8">
               <h2 className="text-2xl font-tenor mb-1">{product.name}</h2>
-              {resolvedProduct.product_code && (
+              {displayProduct.product_code && (
                 <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">
-                  Code: {resolvedProduct.product_code}
+                  Code: {displayProduct.product_code}
                 </p>
               )}
               <p className="text-xl mb-6">
                 {formatPrice(
                   Number(
-                    resolvedProduct?.price ?? resolvedProduct?.displayPrice ?? 0
+                    displayProduct?.price ?? displayProduct?.displayPrice ?? 0
                   )
                 )}
               </p>
@@ -451,7 +453,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                 <div className="flex gap-2 flex-wrap">
                   {sizes.map((s) => {
                     const variantForSize = (
-                      resolvedProduct?.product_variants || []
+                      displayProduct?.product_variants || []
                     ).find((v: any) => v.size === s);
                     const disabled =
                       !variantForSize ||
@@ -498,7 +500,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                   onClick={async () => {
                     // If there are variants, require size selection
                     const hasVariants =
-                      (resolvedProduct?.product_variants || []).length > 0;
+                      (displayProduct?.product_variants || []).length > 0;
                     if (hasVariants && !selectedSize) {
                       toast.warning("Please select a size");
                       return;
@@ -506,7 +508,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                     // Find variant id if exists
                     let variant_id: string | null = null;
                     if (hasVariants) {
-                      const v = resolvedProduct.product_variants.find(
+                      const v = displayProduct.product_variants.find(
                         (x: any) => x.size === selectedSize && x.visible
                       );
                       if (!v) {
@@ -524,7 +526,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                     const user = await getCurrentUser();
                     await addToCart(
                       {
-                        product_id: resolvedProduct.id,
+                        product_id: displayProduct.id,
                         variant_id,
                         quantity: 1,
                       },
@@ -542,7 +544,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                     }, 500);
                   }}
                   disabled={
-                    (resolvedProduct?.product_variants || []).length > 0 &&
+                    (displayProduct?.product_variants || []).length > 0 &&
                     !selectedSize
                   }
                   className={`flex-1 bg-primary text-primary-foreground transition-all duration-220 ${
