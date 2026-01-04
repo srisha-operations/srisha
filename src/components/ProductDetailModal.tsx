@@ -1,10 +1,19 @@
 // src/components/ProductDetailModal.tsx
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogClose,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Heart, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
-import { listWishlist, addToWishlist, removeFromWishlist } from "@/services/wishlist";
+import {
+  listWishlist,
+  addToWishlist,
+  removeFromWishlist,
+} from "@/services/wishlist";
 import { addToCart, submitPreorder } from "@/services/cart";
 import { getProductById } from "@/services/products";
 import { getCurrentUser } from "@/services/auth";
@@ -53,7 +62,10 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
       setSelectedSize("");
       // If variants aren't present, fetch full product by id
       (async () => {
-        if (!product.product_variants || product.product_variants.length === 0) {
+        if (
+          !product.product_variants ||
+          product.product_variants.length === 0
+        ) {
           try {
             const { data: fresh } = await getProductById(product.id);
             if (fresh) {
@@ -89,7 +101,9 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
       } catch (err) {
         setIsWishlisted(prev);
         console.error("guest wishlist toggle failed", err);
-        toast.error("Could not update wishlist", { description: "Please try again." });
+        toast.error("Could not update wishlist", {
+          description: "Please try again.",
+        });
       }
       return;
     }
@@ -106,7 +120,9 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     } catch (err) {
       setIsWishlisted(prev);
       console.error("wishlist toggle failed", err);
-      toast.error("Could not update wishlist", { description: "Please try again." });
+      toast.error("Could not update wishlist", {
+        description: "Please try again.",
+      });
     }
   };
 
@@ -121,15 +137,17 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     let variant_id: string | null = null;
     const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
     if (hasVariants) {
-      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+      const v = resolvedProduct.product_variants.find(
+        (x: any) => x.size === selectedSize && x.visible
+      );
       if (!v) {
-        toast.warning('Please select an available size');
+        toast.warning("Please select an available size");
         setIsAddingToCart(false);
         setCartAdded(false);
         return;
       }
       if (v.stock === 0) {
-        toast.error('Selected size out of stock');
+        toast.error("Selected size out of stock");
         setIsAddingToCart(false);
         setCartAdded(false);
         return;
@@ -138,12 +156,17 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     }
 
     // Always add to cart (local for guests). If guest, also prompt auth modal.
-    await addToCart({ product_id: resolvedProduct.id, variant_id, quantity: 1 }, user?.id);
+    await addToCart(
+      { product_id: resolvedProduct.id, variant_id, quantity: 1 },
+      user?.id
+    );
     window.dispatchEvent(new Event("cartUpdated"));
 
     if (!user) {
       // Encourage signing in/up but do not block adding to cart
-      window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }));
+      window.dispatchEvent(
+        new CustomEvent("openAuthModal", { detail: "signin" })
+      );
     }
 
     // End animation after 500ms then close
@@ -179,16 +202,18 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
     if (hasVariants) {
       if (!selectedSize) {
-        toast.warning('Please select a size');
+        toast.warning("Please select a size");
         return;
       }
-      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+      const v = resolvedProduct.product_variants.find(
+        (x: any) => x.size === selectedSize && x.visible
+      );
       if (!v) {
-        toast.error('Selected size unavailable');
+        toast.error("Selected size unavailable");
         return;
       }
       if (v.stock === 0) {
-        toast.error('Selected size out of stock');
+        toast.error("Selected size out of stock");
         return;
       }
     }
@@ -196,16 +221,40 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
     if (mode === "inquiry") {
       // set cart_items status -> 'inquired' for this user's relevant items
       // add the item if not already in cart, then submit preorder for that product
-      await addToCart({ product_id: resolvedProduct.id, variant_id: hasVariants ? resolvedProduct.product_variants.find((x: any) => x.size === selectedSize).id : null, quantity: 1 }, user.id);
+      await addToCart(
+        {
+          product_id: resolvedProduct.id,
+          variant_id: hasVariants
+            ? resolvedProduct.product_variants.find(
+                (x: any) => x.size === selectedSize
+              ).id
+            : null,
+          quantity: 1,
+        },
+        user.id
+      );
       await submitPreorder(user.id); // marks all cart items for user as 'inquired'
-      toast.success("Preorder submitted!", { description: "The store will contact you soon." });
+      toast.success("Preorder submitted!", {
+        description: "The store will contact you soon.",
+      });
       window.dispatchEvent(new Event("cartUpdated"));
       onOpenChange(false);
       return;
     }
 
     // mode === normal -> add to cart and open CartDrawer
-    await addToCart({ product_id: resolvedProduct.id, variant_id: hasVariants ? resolvedProduct.product_variants.find((x: any) => x.size === selectedSize).id : null, quantity: 1 }, user.id);
+    await addToCart(
+      {
+        product_id: resolvedProduct.id,
+        variant_id: hasVariants
+          ? resolvedProduct.product_variants.find(
+              (x: any) => x.size === selectedSize
+            ).id
+          : null,
+        quantity: 1,
+      },
+      user.id
+    );
     window.dispatchEvent(new Event("cartUpdated"));
     // Open cart drawer
     window.dispatchEvent(new Event("openCartDrawer"));
@@ -216,9 +265,54 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
   const sizes = Array.from(
     new Set(
-      (resolvedProduct?.product_variants || []).map((v: any) => v.size).filter(Boolean)
+      (resolvedProduct?.product_variants || [])
+        .map((v: any) => v.size)
+        .filter(Boolean)
     )
   ) as string[];
+
+  // Helper to parse description
+  const renderDescription = () => {
+    const desc = resolvedProduct.description;
+
+    // If it's a simple string (legacy or plain text)
+    if (typeof desc === "string") {
+      return (
+        <p className="text-sm text-muted-foreground">
+          {desc || "No description available."}
+        </p>
+      );
+    }
+
+    // If it's an object (structured)
+    if (typeof desc === "object" && desc !== null) {
+      return (
+        <div className="space-y-4 text-sm text-muted-foreground">
+          {desc.description && <p>{desc.description}</p>}
+
+          {desc.details && Object.keys(desc.details).length > 0 && (
+            <div className="space-y-2 mt-4">
+              <h4 className="font-medium text-foreground">Product Details:</h4>
+              <ul className="space-y-1">
+                {Object.entries(desc.details).map(([key, value]) => (
+                  <li key={key} className="flex gap-2">
+                    <span className="font-medium text-foreground min-w-[100px]">
+                      {key}:
+                    </span>
+                    <span>{value as string}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <p className="text-sm text-muted-foreground">No description available.</p>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -248,26 +342,56 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                     <>
                       <button
                         onClick={() => {
-                          const next = (currentImageIndex - 1 + (product.product_images?.length || 1)) % (product.product_images?.length || 1);
+                          const next =
+                            (currentImageIndex -
+                              1 +
+                              (product.product_images?.length || 1)) %
+                            (product.product_images?.length || 1);
                           setCurrentImageIndex(next);
                           setSelectedImage(product.product_images[next].url);
                         }}
                         aria-label="Previous image"
                         className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/70 p-2 rounded-full hover:bg-background"
                       >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg
+                          className="w-5 h-5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <path
+                            d="M15 18l-6-6 6-6"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
                       </button>
 
                       <button
                         onClick={() => {
-                          const next = (currentImageIndex + 1) % (product.product_images?.length || 1);
+                          const next =
+                            (currentImageIndex + 1) %
+                            (product.product_images?.length || 1);
                           setCurrentImageIndex(next);
                           setSelectedImage(product.product_images[next].url);
                         }}
                         aria-label="Next image"
                         className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/70 p-2 rounded-full hover:bg-background"
                       >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg
+                          className="w-5 h-5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <path
+                            d="M9 18l6-6-6-6"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
                       </button>
                     </>
                   )}
@@ -286,10 +410,18 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                         }}
                         className={cn(
                           "w-20 h-24 flex-shrink-0 border-2 overflow-hidden",
-                          currentImageIndex === idx ? "border-primary" : "border-transparent"
+                          currentImageIndex === idx
+                            ? "border-primary"
+                            : "border-transparent"
                         )}
                       >
-                        <img src={img.url} alt={`Thumbnail ${idx + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        <img
+                          src={img.url}
+                          alt={`Thumbnail ${idx + 1}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
                       </button>
                     ))}
                   </div>
@@ -298,8 +430,19 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
             </div>
 
             <div className="p-6 lg:p-8">
-              <h2 className="text-2xl font-tenor mb-2">{product.name}</h2>
-              <p className="text-xl mb-6">{formatPrice(Number(resolvedProduct?.price ?? resolvedProduct?.displayPrice ?? 0))}</p>
+              <h2 className="text-2xl font-tenor mb-1">{product.name}</h2>
+              {resolvedProduct.product_code && (
+                <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">
+                  Code: {resolvedProduct.product_code}
+                </p>
+              )}
+              <p className="text-xl mb-6">
+                {formatPrice(
+                  Number(
+                    resolvedProduct?.price ?? resolvedProduct?.displayPrice ?? 0
+                  )
+                )}
+              </p>
 
               <div className="mb-6">
                 <label className="text-sm text-muted-foreground block mb-3">
@@ -307,23 +450,30 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                 </label>
                 <div className="flex gap-2 flex-wrap">
                   {sizes.map((s) => {
-                    const variantForSize = (resolvedProduct?.product_variants || []).find((v: any) => v.size === s);
-                    const disabled = !variantForSize || variantForSize.stock === 0 || variantForSize.visible === false;
+                    const variantForSize = (
+                      resolvedProduct?.product_variants || []
+                    ).find((v: any) => v.size === s);
+                    const disabled =
+                      !variantForSize ||
+                      variantForSize.stock === 0 ||
+                      variantForSize.visible === false;
                     return (
-                    <button
-                      key={s}
-                      onClick={() => { if (!disabled) setSelectedSize(s); }}
-                      className={cn(
-                        "px-4 py-2 border",
-                        selectedSize === s
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : disabled
-                          ? "bg-background border-border opacity-50 cursor-not-allowed"
-                          : "bg-background border-border"
-                      )}
-                    >
-                      {s}
-                    </button>
+                      <button
+                        key={s}
+                        onClick={() => {
+                          if (!disabled) setSelectedSize(s);
+                        }}
+                        className={cn(
+                          "px-4 py-2 border",
+                          selectedSize === s
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : disabled
+                            ? "bg-background border-border opacity-50 cursor-not-allowed"
+                            : "bg-background border-border"
+                        )}
+                      >
+                        {s}
+                      </button>
                     );
                   })}
                 </div>
@@ -331,30 +481,40 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
 
               <div className="flex gap-3 mb-8">
                 <Button
-                    variant="outline"
-                    onClick={handleWishlistToggle}
-                    className="flex-1"
-                  >
-                    <Heart className={`w-4 h-4 mr-2 ${isWishlisted ? 'fill-accent text-accent' : 'text-foreground'}`} /> {isWishlisted ? 'WISHLISTED' : 'WISHLIST'}
-                  </Button>
+                  variant="outline"
+                  onClick={handleWishlistToggle}
+                  className="flex-1"
+                >
+                  <Heart
+                    className={`w-4 h-4 mr-2 ${
+                      isWishlisted
+                        ? "fill-accent text-accent"
+                        : "text-foreground"
+                    }`}
+                  />{" "}
+                  {isWishlisted ? "WISHLISTED" : "WISHLIST"}
+                </Button>
                 <Button
                   onClick={async () => {
                     // If there are variants, require size selection
-                    const hasVariants = (resolvedProduct?.product_variants || []).length > 0;
+                    const hasVariants =
+                      (resolvedProduct?.product_variants || []).length > 0;
                     if (hasVariants && !selectedSize) {
-                      toast.warning('Please select a size');
+                      toast.warning("Please select a size");
                       return;
                     }
                     // Find variant id if exists
                     let variant_id: string | null = null;
                     if (hasVariants) {
-                      const v = resolvedProduct.product_variants.find((x: any) => x.size === selectedSize && x.visible);
+                      const v = resolvedProduct.product_variants.find(
+                        (x: any) => x.size === selectedSize && x.visible
+                      );
                       if (!v) {
-                        toast.error('Selected size unavailable');
+                        toast.error("Selected size unavailable");
                         return;
                       }
                       if (v.stock === 0) {
-                        toast.error('Selected size out of stock');
+                        toast.error("Selected size out of stock");
                         return;
                       }
                       variant_id = v.id;
@@ -362,12 +522,29 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                     setIsAddingToCart(true);
                     setCartAdded(true);
                     const user = await getCurrentUser();
-                    await addToCart({ product_id: resolvedProduct.id, variant_id, quantity: 1 }, user?.id);
-                    window.dispatchEvent(new Event('cartUpdated'));
-                    if (!user) window.dispatchEvent(new CustomEvent('openAuthModal', { detail: 'signin' }));
-                    setTimeout(() => { setIsAddingToCart(false); setCartAdded(false); onOpenChange(false); }, 500);
+                    await addToCart(
+                      {
+                        product_id: resolvedProduct.id,
+                        variant_id,
+                        quantity: 1,
+                      },
+                      user?.id
+                    );
+                    window.dispatchEvent(new Event("cartUpdated"));
+                    if (!user)
+                      window.dispatchEvent(
+                        new CustomEvent("openAuthModal", { detail: "signin" })
+                      );
+                    setTimeout(() => {
+                      setIsAddingToCart(false);
+                      setCartAdded(false);
+                      onOpenChange(false);
+                    }, 500);
                   }}
-                  disabled={(resolvedProduct?.product_variants || []).length > 0 && !selectedSize}
+                  disabled={
+                    (resolvedProduct?.product_variants || []).length > 0 &&
+                    !selectedSize
+                  }
                   className={`flex-1 bg-primary text-primary-foreground transition-all duration-220 ${
                     isAddingToCart ? "scale-108" : "scale-100"
                   } ${cartAdded ? "bg-green-600" : ""}`}
@@ -391,9 +568,7 @@ const ProductDetailModal = ({ product, open, onOpenChange }: any) => {
                 <h3 className="text-sm font-tenor text-foreground mb-3">
                   DESCRIPTION
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  {product.description || "No description available."}
-                </p>
+                {renderDescription()}
               </div>
             </div>
           </div>

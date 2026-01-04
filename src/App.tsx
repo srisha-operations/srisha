@@ -85,8 +85,11 @@ const AdminGuard = () => {
   return null;
 };
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CookieConsent } from "@/components/CookieConsent";
+
 const App = () => (
-  <>
+  <ErrorBoundary>
     <BrowserRouter>
       <AdminGuard />
       <Routes>
@@ -121,9 +124,10 @@ const App = () => (
         {/* fallback */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <CookieConsent />
     </BrowserRouter>
     <Toaster />
-  </>
+  </ErrorBoundary>
 );
 
 export default App;
