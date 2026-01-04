@@ -164,12 +164,12 @@ const ProductCard = ({
 
   return (
     <div
-      className="group relative"
+      className="group relative h-full flex flex-col"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className="relative overflow-hidden bg-muted mb-4 cursor-pointer"
+        className="relative overflow-hidden bg-muted mb-4 cursor-pointer flex-shrink-0"
         onClick={handleView}
       >
         <AspectRatio ratio={4 / 5}>
@@ -214,8 +214,8 @@ const ProductCard = ({
         </AspectRatio>
       </div>
 
-      <div className="space-y-3">
-        <div>
+      <div className="space-y-3 flex flex-col flex-1">
+        <div className="flex-1">
           <h3 className="font-tenor text-lg md:text-xl text-foreground">
             {product.name}
           </h3>
