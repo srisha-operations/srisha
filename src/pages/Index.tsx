@@ -6,11 +6,12 @@ import ProductListingSection from "@/components/ProductListingSection";
 import AboutSection from "@/components/AboutSection";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
+import { HeroContent } from "@/types/content";
 
 import SEO from "@/components/SEO";
 
 const Index = () => {
-  const [hero, setHero] = useState<any>(null);
+  const [hero, setHero] = useState<HeroContent | null>(null);
   const [gallery, setGallery] = useState<any>(null);
 
   useEffect(() => {
