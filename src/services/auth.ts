@@ -14,6 +14,7 @@ export const signUp = async (
         name,
         phone,
       },
+      emailRedirectTo: window.location.origin,
     },
   });
 
