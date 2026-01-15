@@ -43,6 +43,14 @@ const Index = () => {
       <SEO 
         title="Home" 
         description="SRISHA - Discover luxury ethnic wear and contemporary fashion." 
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "SRISHA",
+          "url": window.location.origin,
+          "logo": "https://your-domain.com/logo.png", // Ideally dynamic
+          "sameAs": [] // Social links if any
+        }}
       />
       <Header />
       
