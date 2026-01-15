@@ -1,18 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Static Pages -->
+  
   <url>
-    <loc>https://www.srisha.com/</loc>
+    <loc>https://www.srishabynischithayogesh.com</loc>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
-    <changefreq>daily</changefreq>
   </url>
   <url>
-    <loc>https://www.srisha.com/products</loc>
+    <loc>https://www.srishabynischithayogesh.com/products</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.srishabynischithayogesh.com/about</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Dynamic Products -->
+  
+  <url>
+    <loc>https://www.srishabynischithayogesh.com/product/sp-04</loc>
+    <lastmod>2025-12-04T17:03:22.275Z</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <changefreq>daily</changefreq>
   </url>
   <url>
-    <loc>https://www.srisha.com/checkout</loc>
-    <priority>0.5</priority>
-    <changefreq>never</changefreq>
+    <loc>https://www.srishabynischithayogesh.com/product/sp-05</loc>
+    <lastmod>2025-12-04T17:03:22.275Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.srishabynischithayogesh.com/product/sp-01</loc>
+    <lastmod>2025-12-04T17:03:22.275Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.srishabynischithayogesh.com/product/sp-07</loc>
+    <lastmod>2025-12-04T17:03:22.275Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.srishabynischithayogesh.com/product/sp-03</loc>
+    <lastmod>2025-12-04T17:03:22.275Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.srishabynischithayogesh.com/product/sp-02</loc>
+    <lastmod>2025-12-04T17:03:22.275Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.srishabynischithayogesh.com/product/sp-06</loc>
+    <lastmod>2025-12-04T17:03:22.275Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

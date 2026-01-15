@@ -42,12 +42,35 @@ const ProductDetail = () => {
 
   const defaultImg = product.product_images?.find((i: any) => !i.is_hover)?.url || "";
 
+  // Structured Data for Google (Product Schema)
+  const productSchema = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": product.name,
+    "image": product.product_images?.map((img: any) => img.url) || [],
+    "description": product.description,
+    "brand": {
+      "@type": "Brand",
+      "name": "SRISHA"
+    },
+    // We assume default variant price if variants exist, else base price
+    "offers": {
+      "@type": "Offer",
+      "url": window.location.href,
+      "priceCurrency": "INR",
+      "price": product.product_variants?.[0]?.price || product.price || "0",
+      "availability": "https://schema.org/InStock", // You can make this dynamic based on inventory
+      "itemCondition": "https://schema.org/NewCondition"
+    }
+  };
+
   return (
     <div className="w-full">
       <SEO 
         title={product.name}
         description={product.description}
         image={defaultImg}
+        schema={productSchema}
       />
       <Header />
       
