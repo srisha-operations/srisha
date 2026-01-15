@@ -309,14 +309,36 @@ const Header = () => {
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 hover:opacity-80"
           aria-label="Home"
         >
-          {brand?.logo && (
-            <img
-              src={brand.logo}
-              alt={brand?.name || "SRISHA"}
-              loading="lazy"
-              decoding="async"
-              className="h-15 w-auto object-contain"
-            />
+          {brand?.logo_light && brand?.logo_dark ? (
+            <div className="relative h-16 w-40 flex items-center justify-center">
+              {/* Dark Logo (shown on solid background) */}
+              <img
+                src={brand.logo_dark}
+                alt={brand?.name || "SRISHA"}
+                className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-500 ${
+                  showBackground ? "opacity-100" : "opacity-0"
+                }`}
+              />
+              {/* Light Logo (shown on transparent background) */}
+              <img
+                src={brand.logo_light}
+                alt={brand?.name || "SRISHA"}
+                className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-500 ${
+                  showBackground ? "opacity-0" : "opacity-100"
+                }`}
+              />
+            </div>
+          ) : (
+            // Fallback for backward compatibility
+            brand?.logo && (
+              <img
+                src={brand.logo}
+                alt={brand?.name || "SRISHA"}
+                loading="lazy"
+                decoding="async"
+                className="h-15 w-auto object-contain"
+              />
+            )
           )}
         </button>
 
