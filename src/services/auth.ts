@@ -20,7 +20,7 @@ export const signUp = async (
 
   if (error) throw error;
 
-  return data.user;
+  return data;
 };
 
 export const signIn = async (email: string, password: string) => {
