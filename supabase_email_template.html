@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to SRISHA</title>
+  <style>
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      background-color: #F8F5F0;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      padding: 40px;
+      text-align: center;
+      color: #2C2C2C;
+    }
+    .logo {
+      font-size: 32px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+      font-weight: normal;
+      color: #1a1a1a;
+    }
+    .content {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #4a4a4a;
+      margin-bottom: 30px;
+    }
+    .button {
+      display: inline-block;
+      padding: 14px 32px;
+      background-color: #2C2C2C;
+      color: #ffffff !important;
+      text-decoration: none;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-radius: 0;
+      margin-top: 20px;
+    }
+    .button:hover {
+      background-color: #000000;
+      opacity: 0.9;
+    }
+    .footer {
+      margin-top: 40px;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      color: #888888;
+      border-top: 1px solid #eeeeee;
+      padding-top: 20px;
+    }
+    .link-text {
+        font-size: 12px;
+        color: #999;
+        margin-top: 20px;
+    }
+    a {
+        color: #2C2C2C;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="logo">
+      SRISHA
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <h2>Welcome to the family</h2>
+      <p>We are delighted to have you with us.</p>
+      <p>Your account has been successfully created. You can now explore our latest collections of sustainable, handcrafted fashion.</p>
+      
+      <!-- Call to Action -->
+      <!-- We use the ConfirmationURL here so clicking verification also sends them to the site -->
+      <a href="{{ .ConfirmationURL }}" class="button">Start Shopping</a>
+      
+      <p class="link-text">
+          Or paste this link in your browser: <br>
+          <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>&copy; 2026 SRISHA by Nischitha Yogesh. All rights reserved.</p>
+      <p>www.srishabynischithayogesh.com</p>
+    </div>
+  </div>
+</body>
+</html>
