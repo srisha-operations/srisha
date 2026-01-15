@@ -78,15 +78,50 @@ const AuthModal = ({
           return;
         }
 
-        await signUp(
+        const { user, session } = await signUp(
           formData.name,
           formData.email,
           formData.phone,
           formData.password
         );
-        toast.success("Signup successful!", {
-          description: "Check your email to confirm your account.",
-        });
+
+        if (session && user) {
+           // Auto-login active
+           onAuthSuccess?.({
+            name: user.user_metadata?.name || formData.name,
+            email: user.email,
+          });
+
+          toast.success("Welcome to SRISHA!", {
+            description: `Account created. Signed in as ${user.email}`,
+          });
+          
+          if (onAfterAuthSuccess) {
+             setTimeout(() => onAfterAuthSuccess(), 100);
+          }
+
+          // Trigger "Welcome Email" (via Magic Link)
+          // Since "Confirm Email" is disabled for auto-login, we use Magic Link as the notification.
+          // The user should style the "Magic Link" template in Supabase to look like a Welcome email.
+          try {
+             const { supabase } = await import("@/lib/supabaseClient");
+             await supabase.auth.signInWithOtp({
+               email: user.email,
+               options: {
+                 shouldCreateUser: false,
+                 emailRedirectTo: window.location.origin,
+               }
+             });
+          } catch (e) {
+            console.error("Failed to send welcome email:", e);
+          }
+        } else {
+           // Fallback if mechanism requires email confirmation
+           toast.success("Welcome to SRISHA!", {
+            description: "Account created successfully.",
+          });
+        }
+
         setFormData({ name: "", email: "", phone: "", password: "" });
         onOpenChange(false);
       } else {
